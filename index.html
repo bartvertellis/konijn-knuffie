@@ -1,0 +1,1641 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Konijn Knuffie & de Gouden Wortel</title>
+<style>
+  :root {
+    --paars: #7b3fe4;
+    --paars-licht: #9d6bff;
+    --roze: #ff4fa3;
+    --roze-donker: #d62f80;
+    --geel: #ffd93d;
+    --groen: #5ec26a;       /* alleen voor 'goed' feedback */
+    --groen-donker: #45a352;
+    --rood: #ff6b6b;
+    --donker: #3a2350;
+    --kaart: #fffdf7;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0; padding: 0; height: 100%;
+    font-family: "Comic Sans MS", "Trebuchet MS", "Segoe UI", system-ui, sans-serif;
+    color: var(--donker);
+    overflow: hidden;
+    user-select: none;
+  }
+  body {
+    background: linear-gradient(160deg, #ffd6ec 0%, #e7d6ff 100%);
+    transition: background 0.6s ease;
+  }
+  #app {
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+  }
+  .screen {
+    display: none;
+    width: 100%;
+    max-width: 760px;
+    max-height: 100%;
+    overflow-y: auto;
+    animation: pop 0.4s ease;
+  }
+  .screen.active { display: block; }
+  @keyframes pop {
+    from { transform: scale(0.92); opacity: 0; }
+    to   { transform: scale(1); opacity: 1; }
+  }
+  .kaart {
+    background: var(--kaart);
+    border-radius: 28px;
+    padding: 28px 26px;
+    box-shadow: 0 14px 0 rgba(0,0,0,0.12), 0 18px 40px rgba(0,0,0,0.18);
+    text-align: center;
+  }
+  h1 { font-size: 2.1rem; margin: 6px 0 4px; line-height: 1.15; color: var(--paars); }
+  h2 { font-size: 1.5rem; margin: 0 0 12px; color: var(--paars); }
+  p.verhaal { font-size: 1.15rem; line-height: 1.55; margin: 14px auto; max-width: 560px; }
+  .ondertitel { font-size: 1.05rem; color: #7a6fa0; margin: 2px 0 16px; }
+
+  .knop {
+    display: inline-block;
+    border: none;
+    cursor: pointer;
+    font-family: inherit;
+    font-weight: bold;
+    font-size: 1.25rem;
+    padding: 16px 30px;
+    border-radius: 999px;
+    color: white;
+    background: var(--roze);
+    box-shadow: 0 6px 0 var(--roze-donker);
+    transition: transform 0.08s, box-shadow 0.08s;
+    margin: 8px 6px;
+  }
+  .knop:active { transform: translateY(4px); box-shadow: 0 2px 0 var(--roze-donker); }
+  .knop.paars { background: var(--paars-licht); box-shadow: 0 6px 0 #5a3fa0; }
+  .knop.paars:active { box-shadow: 0 2px 0 #5a3fa0; }
+  .knop.klein { font-size: 1rem; padding: 10px 20px; }
+
+  /* Startscherm */
+  .held-emoji { font-size: 5.5rem; line-height: 1; animation: zweef 2.2s ease-in-out infinite; }
+  @keyframes zweef { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-12px)} }
+
+  .moeilijk-rij { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin: 10px 0 4px; }
+  .moeilijk-knop {
+    flex: 1 1 30%;
+    min-width: 150px;
+    border: 4px solid transparent;
+    background: #f3eefe;
+    border-radius: 20px;
+    padding: 14px;
+    cursor: pointer;
+    font-family: inherit;
+    transition: transform 0.1s, border-color 0.1s;
+  }
+  .moeilijk-knop:active { transform: scale(0.97); }
+  .moeilijk-knop.gekozen { border-color: var(--paars); background: #ece3ff; }
+  .moeilijk-knop .titel { font-weight: bold; font-size: 1.15rem; color: var(--paars); }
+  .moeilijk-knop .leeftijd { font-size: 0.95rem; color: #7a6fa0; }
+
+  /* Kaart / reis */
+  .reis { list-style: none; padding: 0; margin: 18px auto; max-width: 540px; text-align: left; }
+  .reis li {
+    display: flex; align-items: center; gap: 14px;
+    background: #f3eefe; border-radius: 18px; padding: 12px 16px; margin: 10px 0;
+    border: 3px solid transparent;
+  }
+  .reis li .w-emoji { font-size: 2.2rem; }
+  .reis li .w-tekst { flex: 1; }
+  .reis li .w-naam { font-weight: bold; font-size: 1.1rem; }
+  .reis li .w-stap { font-size: 0.85rem; color: #8a7fb0; }
+  .reis li.klaar { background: #e3f9e5; }
+  .reis li.nu { border-color: var(--geel); background: #fff7d6; cursor: pointer; box-shadow: 0 4px 0 #e9c200; }
+  .reis li.nu:active { transform: translateY(3px); box-shadow: 0 1px 0 #e9c200; }
+  .reis li.op-slot { opacity: 0.5; }
+  .reis li .vink { font-size: 1.6rem; }
+
+  /* HUD */
+  .hud {
+    display: flex; justify-content: space-between; align-items: center;
+    background: rgba(255,255,255,0.85); border-radius: 18px;
+    padding: 8px 16px; margin-bottom: 10px; font-size: 1.15rem; font-weight: bold;
+  }
+  .hud .blok { display:flex; align-items:center; gap:4px; }
+
+  /* Racebaan */
+  .baan {
+    position: relative;
+    height: 92px;
+    background: linear-gradient(#f6e3b8, #ecd29a);
+    border-radius: 20px;
+    margin: 4px 0 18px;
+    overflow: hidden;
+    border: 4px solid #fff;
+  }
+  .baan .grond { position:absolute; bottom:0; left:0; right:0; height: 26px; background:#e0bd78; }
+  .doel { position: absolute; right: 6px; top: 8px; font-size: 2.6rem; }
+  .renner {
+    position: absolute; bottom: 22px;
+    font-size: 2.4rem;
+    transition: left 0.5s cubic-bezier(.34,1.56,.64,1);
+  }
+  .renner.knuffie { z-index: 2; }
+  .renner.vos { bottom: 50px; font-size: 2rem; opacity: 0.9; }
+  .renner.hop { animation: hop 0.5s ease; }
+  @keyframes hop { 0%,100%{transform:translateY(0)} 40%{transform:translateY(-26px)} }
+
+  /* Vraag */
+  .vraag {
+    font-size: 2.6rem; font-weight: bold; margin: 6px 0 16px; color: var(--donker);
+  }
+  .antwoorden { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; max-width: 480px; margin: 0 auto; }
+  .antwoord {
+    font-family: inherit; font-weight: bold; font-size: 1.7rem;
+    padding: 18px 10px; border-radius: 18px; border: none; cursor: pointer;
+    background: var(--paars-licht); color: white; box-shadow: 0 5px 0 var(--paars);
+    transition: transform 0.08s, box-shadow 0.08s;
+  }
+  .antwoord:active { transform: translateY(3px); box-shadow: 0 2px 0 var(--paars); }
+  .antwoord.goed { background: var(--groen); box-shadow: 0 5px 0 var(--groen-donker); animation: schud-goed 0.4s; }
+  .antwoord.fout { background: var(--rood); box-shadow: 0 5px 0 #d64545; animation: schud 0.4s; }
+  .antwoord:disabled { cursor: default; opacity: 0.95; }
+  @keyframes schud { 0%,100%{transform:translateX(0)} 25%{transform:translateX(-8px)} 75%{transform:translateX(8px)} }
+  @keyframes schud-goed { 0%,100%{transform:scale(1)} 50%{transform:scale(1.08)} }
+
+  .tijdbalk {
+    height: 14px; background: #ece0cf; border-radius: 8px; overflow: hidden;
+    margin: 0 0 14px; border: 2px solid #fff;
+  }
+  .tijdbalk-vul { height: 100%; width: 100%; background: var(--groen); transition: width 0.1s linear; }
+
+  .feedback { font-size: 1.3rem; font-weight: bold; height: 30px; margin-top: 14px; }
+  .feedback.goed { color: var(--groen); }
+  .feedback.fout { color: var(--rood); }
+
+  /* Overlay sterren */
+  .vier-emoji { font-size: 4.5rem; animation: zweef 1.6s ease-in-out infinite; }
+
+  .topbalk { display:flex; justify-content:flex-end; gap:8px; margin-bottom:6px; }
+  .icoonknop {
+    border:none; background:rgba(255,255,255,0.7); border-radius:50%;
+    width:42px; height:42px; font-size:1.2rem; cursor:pointer;
+  }
+  .vink-groot { font-size: 4rem; }
+  small.tip { display:block; color:#8a7fb0; margin-top:10px; font-size:0.85rem; }
+
+  /* Naam-invoer */
+  .naam-veld {
+    font-family: inherit; font-size: 1.2rem; text-align: center;
+    padding: 12px 18px; border-radius: 16px; border: 3px solid #e0d3f5;
+    background: #faf6ff; color: var(--donker); width: 80%; max-width: 320px;
+    margin: 4px auto 12px; display: block;
+  }
+  .naam-veld:focus { outline: none; border-color: var(--roze); }
+
+  /* Rij-tussenspel */
+  .canvas-wrap { position: relative; display: inline-block; max-width: 100%; }
+  #raceCanvas {
+    width: 100%; max-width: 360px; height: auto; display: block;
+    border-radius: 18px; border: 4px solid #fff; background: #e8b15a;
+    touch-action: none; margin: 0 auto;
+  }
+  .rij-knoppen {
+    display: flex; gap: 16px; justify-content: center; margin-top: 12px;
+  }
+  .rij-knop {
+    font-family: inherit; font-size: 2rem; font-weight: bold;
+    width: 96px; height: 64px; border: none; border-radius: 18px;
+    background: var(--paars-licht); color: white; cursor: pointer;
+    box-shadow: 0 5px 0 var(--paars); touch-action: none;
+  }
+  .rij-knop:active { transform: translateY(3px); box-shadow: 0 2px 0 var(--paars); }
+
+  /* Aankleedspel */
+  .dress-wrap { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; align-items: flex-start; }
+  #dressCanvas {
+    width: 240px; max-width: 46%; height: auto;
+    background: #7a5aa8;
+    border-radius: 22px; border: 4px solid #fff;
+  }
+  .dress-rechts { flex: 1 1 280px; min-width: 250px; }
+  .dress-tabs { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin: 4px 0 12px; }
+  .dress-tab {
+    font-size: 1.4rem; width: 48px; height: 48px; border: 3px solid transparent;
+    border-radius: 14px; background: #f3eefe; cursor: pointer; display: flex;
+    align-items: center; justify-content: center; padding: 0;
+  }
+  .dress-tab.actief { border-color: var(--paars); background: #ece3ff; }
+  .dress-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .dress-item {
+    position: relative; aspect-ratio: 1 / 1; border-radius: 16px; cursor: pointer;
+    border: 4px solid #fff; box-shadow: 0 3px 0 rgba(0,0,0,0.12);
+    display: flex; align-items: center; justify-content: center; overflow: hidden;
+    background: #eef1fb;
+  }
+  .dress-item:active { transform: translateY(2px); }
+  .dress-item .staal { width: 70%; height: 70%; border-radius: 12px; box-shadow: inset 0 -6px 0 rgba(0,0,0,0.12); }
+  .dress-item .merk { position: absolute; bottom: 3px; font-size: 1.2rem; opacity: 0.55; }
+  .dress-item.gekozen { border-color: var(--groen); box-shadow: 0 0 0 3px var(--groen), 0 3px 0 rgba(0,0,0,0.12); }
+  .dress-item.op-slot .staal { filter: grayscale(0.7) brightness(1.15); opacity: 0.6; }
+  .dress-item .slotje { position: absolute; right: 4px; bottom: 3px; font-size: 1.1rem; }
+  .dress-item .vraag {
+    position: absolute; right: 3px; top: 3px; background: var(--geel); color: #7a5a00;
+    font-weight: bold; font-size: 0.85rem; border-radius: 7px; padding: 0 6px;
+  }
+  .dress-item.geen { background: #f0eef6; }
+  .dress-item.geen .verbod { font-size: 2rem; color: #b9b1cf; }
+
+  /* Modequiz modal */
+  .modaal {
+    display: none; position: fixed; inset: 0; z-index: 50;
+    background: rgba(60,30,80,0.45); align-items: center; justify-content: center; padding: 16px;
+  }
+  .modaal.open { display: flex; }
+  .modaal-paneel {
+    background: var(--kaart); border-radius: 24px; padding: 22px 20px; max-width: 460px; width: 100%;
+    text-align: center; box-shadow: 0 12px 0 rgba(0,0,0,0.15); position: relative; animation: pop 0.3s ease;
+  }
+  .modaal-titel { font-size: 1.5rem; font-weight: bold; color: var(--paars); margin-bottom: 4px; }
+  .modaal .sluit {
+    position: absolute; right: 12px; top: 12px; border: none; background: var(--roze);
+    color: #fff; width: 34px; height: 34px; border-radius: 50%; font-size: 1.1rem; cursor: pointer;
+  }
+  .quiz-vraag { font-size: 2.2rem; font-weight: bold; margin: 12px 0 16px; }
+  .quiz-opties { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+  .quiz-optie {
+    font-family: inherit; font-weight: bold; font-size: 1.5rem; min-width: 64px;
+    padding: 12px 8px; border-radius: 50px; border: none; cursor: pointer;
+    background: var(--roze); color: #fff; box-shadow: 0 4px 0 var(--roze-donker);
+  }
+  .quiz-optie:active { transform: translateY(2px); box-shadow: 0 2px 0 var(--roze-donker); }
+  .quiz-optie.goed { background: var(--groen); box-shadow: 0 4px 0 var(--groen-donker); }
+  .quiz-optie.fout { background: var(--rood); box-shadow: 0 4px 0 #d64545; animation: schud 0.4s; }
+  .modaal-tip { font-size: 0.95rem; color: #8a7fb0; margin-top: 12px; }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- STARTSCHERM -->
+  <section id="startScreen" class="screen active">
+    <div class="kaart">
+      <div class="held-emoji">🐰</div>
+      <h1>Konijn Knuffie<br>& de Gouden Wortel</h1>
+      <p class="ondertitel">Een groot rekenavontuur!</p>
+      <p class="verhaal" style="margin-bottom:6px;">Hoe heet jij, dappere held?</p>
+      <input class="naam-veld" id="naamInput" type="text" maxlength="14" placeholder="Typ je naam..." autocomplete="off">
+      <p class="verhaal" style="margin:6px 0;">Kies hoe knap je al bent met rekenen:</p>
+      <div class="moeilijk-rij" id="moeilijkRij">
+        <div class="moeilijk-knop" data-niveau="makkelijk">
+          <div class="titel">🌱 Beginner</div>
+          <div class="leeftijd">8–9 jaar</div>
+        </div>
+        <div class="moeilijk-knop gekozen" data-niveau="gemiddeld">
+          <div class="titel">⭐ Avonturier</div>
+          <div class="leeftijd">10–11 jaar</div>
+        </div>
+        <div class="moeilijk-knop" data-niveau="moeilijk">
+          <div class="titel">🔥 Held</div>
+          <div class="leeftijd">12 jaar</div>
+        </div>
+      </div>
+      <button class="knop" onclick="startAvontuur()">Start het avontuur! ▶</button>
+      <button class="knop paars klein" onclick="openDress()">👗 Knuffie aankleden</button>
+      <small class="tip">Tip: speel op een groot scherm of tablet voor het mooiste avontuur.</small>
+    </div>
+  </section>
+
+  <!-- KAART / REIS -->
+  <section id="mapScreen" class="screen">
+    <div class="kaart">
+      <h2>🗺️ De reis van Knuffie</h2>
+      <p class="ondertitel" id="reisOndertitel">Klik op de gloeiende plek om verder te gaan.</p>
+      <ul class="reis" id="reisLijst"></ul>
+      <button class="knop klein" onclick="openDress()">👗 Kledingkast</button>
+      <button class="knop paars klein" onclick="naarStart()">⟵ Terug</button>
+    </div>
+  </section>
+
+  <!-- AANKLEEDSPEL -->
+  <section id="dressScreen" class="screen">
+    <div class="kaart">
+      <div class="topbalk">
+        <button class="icoonknop" onclick="catwalkToggle()" id="catwalkKnop" title="Catwalk!">📸</button>
+        <button class="icoonknop" onclick="willekeurigeOutfit()" title="Verras me!">🎲</button>
+        <button class="icoonknop" onclick="dressTerug()" title="Terug">⟵</button>
+      </div>
+      <h2 id="dressCat">👗 Knuffie aankleden</h2>
+      <div class="dress-wrap">
+        <canvas id="dressCanvas" width="260" height="320"></canvas>
+        <div class="dress-rechts">
+          <div class="dress-tabs" id="dressTabs"></div>
+          <div class="dress-grid" id="dressGrid"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MODEQUIZ -->
+  <div class="modaal" id="modequiz">
+    <div class="modaal-paneel">
+      <button class="sluit" onclick="sluitQuiz()">✕</button>
+      <div class="modaal-titel">Modequiz ✨</div>
+      <div class="modaal-tip">Maak de som goed om dit kledingstuk te ontgrendelen!</div>
+      <div class="quiz-vraag" id="quizVraag">8 × 3 = ?</div>
+      <div class="quiz-opties" id="quizOpties"></div>
+    </div>
+  </div>
+
+  <!-- VERHAAL -->
+  <section id="storyScreen" class="screen">
+    <div class="kaart">
+      <div id="verhaalEmoji" class="held-emoji">🐰</div>
+      <p class="ondertitel" id="verhaalStap">Hoofdstuk</p>
+      <h2 id="verhaalTitel">Titel</h2>
+      <p class="verhaal" id="verhaalTekst">...</p>
+      <button class="knop" onclick="startRit()" id="verhaalKnop">Vooruit! ▶</button>
+    </div>
+  </section>
+
+  <!-- RIT (top-down racen) -->
+  <section id="raceScreen" class="screen">
+    <div class="kaart">
+      <div class="hud">
+        <div class="blok" id="ritWereld">🏁 Op weg...</div>
+        <div class="blok" id="ritWortels">🥕 0</div>
+        <div class="blok" id="ritAfstand">🏁 0%</div>
+      </div>
+      <div class="canvas-wrap">
+        <canvas id="raceCanvas" width="360" height="520"></canvas>
+      </div>
+      <div class="rij-knoppen">
+        <button class="rij-knop" id="linkKnop">◀</button>
+        <button class="rij-knop" id="rechtsKnop">▶</button>
+      </div>
+      <p class="ondertitel" id="ritTip">Stuur met ◀ ▶ (of pijltjes/vinger). Ontwijk 🌵 en pak 🥕!</p>
+    </div>
+  </section>
+
+  <!-- SPEL -->
+  <section id="gameScreen" class="screen">
+    <div class="kaart">
+      <div class="topbalk">
+        <button class="icoonknop" id="geluidKnop" onclick="wisselGeluid()" title="Geluid aan/uit">🔊</button>
+        <button class="icoonknop" onclick="naarKaart()" title="Naar de kaart">🗺️</button>
+      </div>
+      <div class="hud">
+        <div class="blok" id="hudWereld">🌲 Wereld</div>
+        <div class="blok" id="hudTimer">⏱️ 5</div>
+        <div class="blok" id="hudScore">⭐ 0</div>
+      </div>
+      <div class="baan" id="baan">
+        <div class="grond"></div>
+        <div class="doel" id="doel">🥕</div>
+        <div class="renner vos" id="vos">🦊</div>
+        <div class="renner knuffie" id="knuffie">🐰</div>
+      </div>
+      <div class="tijdbalk"><div class="tijdbalk-vul" id="tijdVul"></div></div>
+      <div class="vraag" id="vraag">7 + 5 = ?</div>
+      <div class="antwoorden" id="antwoorden"></div>
+      <div class="feedback" id="feedback"></div>
+    </div>
+  </section>
+
+  <!-- WERELD MISLUKT -->
+  <section id="failScreen" class="screen">
+    <div class="kaart">
+      <div class="held-emoji">🌧️</div>
+      <h2>Oei! Knuffie is moe.</h2>
+      <p class="verhaal">De Schaduwvos was deze keer te snel. Maar een echte held geeft nooit op! Probeer het nog een keer — je kunt het!</p>
+      <button class="knop" onclick="startRace()">Opnieuw proberen 🔁</button>
+      <button class="knop paars klein" onclick="naarKaart()">Naar de kaart 🗺️</button>
+    </div>
+  </section>
+
+  <!-- WERELD GEHAALD -->
+  <section id="clearScreen" class="screen">
+    <div class="kaart">
+      <div class="vier-emoji">🎉</div>
+      <h2 id="clearTitel">Wereld gehaald!</h2>
+      <p class="verhaal" id="clearTekst">Knapper dan ooit huppelt Knuffie verder.</p>
+      <div id="clearSterren" style="font-size:2rem; margin:10px;">⭐⭐⭐</div>
+      <button class="knop" onclick="naarKaart()">Verder reizen ▶</button>
+    </div>
+  </section>
+
+  <!-- EINDE / TERUGKEER -->
+  <section id="winScreen" class="screen">
+    <div class="kaart">
+      <div class="held-emoji">🐰</div>
+      <div style="font-size:3rem; margin:6px;">🥕✨🏆✨🥕</div>
+      <h1>Knuffie is de held!</h1>
+      <p class="verhaal" id="winTekst">
+        Knuffie greep de Gouden Wortel! Het hele Knuffiebos kleurt weer warm en groen.
+        Alle dieren juichen. Knuffie is geen gewoon konijn meer — hij is de held van het bos.
+        En jij hebt hem geholpen. Dankjewel, dappere rekenheld!
+      </p>
+      <p class="ondertitel" id="winScore">Je verzamelde ⭐ 0 sterren!</p>
+      <button class="knop" onclick="naarStart()">Nog een keer spelen 🔁</button>
+    </div>
+  </section>
+
+</div>
+
+<script>
+/* ====================== GEGEVENS ====================== */
+const WERELDEN = [
+  {
+    naam: "Het Knuffiebos",
+    stap: "Hoofdstuk 1 · De Gewone Wereld",
+    emoji: "🌲",
+    doel: "🥕",
+    bg: "linear-gradient(160deg,#ffe0f0,#ead6ff)",
+    titel: "Een vrolijke ochtend",
+    tekst: "In het vrolijke Knuffiebos woont Konijn Knuffie. Elke dag huppelt hij langs de Gouden Wortel — een magische wortel die het hele bos warm en blij houdt. Vandaag wil Knuffie zijn rekenspieren opwarmen. Help je mee?",
+    stappen: 7
+  },
+  {
+    naam: "De Roep van de Uil",
+    stap: "Hoofdstuk 2 · De Roep om Avontuur",
+    emoji: "🦉",
+    doel: "🚪",
+    bg: "linear-gradient(160deg,#ffe8b3,#ffd6e0)",
+    titel: "De Gouden Wortel is weg!",
+    tekst: "De wijze Oude Uil roept Knuffie. \"De Gouden Wortel is gestolen door de sluwe Schaduwvos! Zonder hem wordt het bos koud en grijs. Alleen jij kunt hem terughalen.\" Knuffie slikt... en zet de eerste stap voorbij de bosrand.",
+    stappen: 8
+  },
+  {
+    naam: "De Donkere Grot",
+    stap: "Hoofdstuk 3 · De Beproevingen",
+    emoji: "🕯️",
+    doel: "💎",
+    bg: "linear-gradient(160deg,#5b4b7c,#9a8bc2)",
+    titel: "Tel de glimwormen",
+    tekst: "Voorbij het bos gaapt een donkere grot. Tik... tik... vallen de druppels. Glimwormen wijzen de weg, maar alleen als je goed rekent. Diep ademhalen, Knuffie — naar binnen!",
+    stappen: 8
+  },
+  {
+    naam: "De Wilde Rivier",
+    stap: "Hoofdstuk 4 · Een Trouwe Vriend",
+    emoji: "🦔",
+    doel: "🌉",
+    bg: "linear-gradient(160deg,#c7b3ff,#ffc6e8)",
+    titel: "Samen sterk",
+    tekst: "Bij de bruisende rivier ontmoet Knuffie zijn vriend Egel Stekel. \"Samen staan we sterk!\" De stapstenen liggen door elkaar — reken goed uit op welke steen je veilig springt, anders plons!",
+    stappen: 9
+  },
+  {
+    naam: "Kasteel van de Schaduwvos",
+    stap: "Hoofdstuk 5 · De Eindstrijd",
+    emoji: "🏰",
+    doel: "🥕",
+    bg: "linear-gradient(160deg,#3a2d5c,#7a4fb0)",
+    titel: "Het laatste gevecht",
+    tekst: "Daar torent het donkere kasteel. Binnen wacht de Schaduwvos met de Gouden Wortel. \"Denk je dat je slim genoeg bent, klein konijn?\" grinnikt hij. Dit is het, Knuffie. Reken snel en slim — voor het bos!",
+    stappen: 10
+  }
+];
+
+// tier-rijtjes per niveau (één tier per wereld)
+const NIVEAUS = {
+  makkelijk: { label: "Beginner", tiers: [1, 1, 2, 2, 3], tijd: 15 },
+  gemiddeld: { label: "Avonturier", tiers: [2, 2, 3, 3, 4], tijd: 10 },
+  moeilijk:  { label: "Held",       tiers: [3, 4, 4, 5, 6], tijd: 5 }
+};
+
+// thema voor het rij-tussenspel per wereld (weg-kleur, rand-kleur, obstakels)
+const RIT_THEMA = [
+  { weg: "#7cc47f", rand: "#3f7a45", obstakels: ["🌳","🪨","🌵"] }, // Knuffiebos
+  { weg: "#e8b15a", rand: "#9c6b32", obstakels: ["🌵","🪨","🛢️"] }, // open vlakte
+  { weg: "#6a5e8a", rand: "#352a52", obstakels: ["🪨","🦇","💧"] }, // grot
+  { weg: "#7fb6e6", rand: "#3a6ea0", obstakels: ["🪨","🌊","🪵"] }, // rivier
+  { weg: "#6b4a8f", rand: "#2e1c4d", obstakels: ["🔥","🪨","⚔️"] }  // kasteel
+];
+
+/* ====================== STAAT ====================== */
+let staat = {
+  naam: "",
+  niveau: "gemiddeld",
+  wereldIndex: 0,
+  hoogsteVrij: 0,     // hoogste wereld die je mag spelen
+  score: 0,
+  knuffiePos: 0,
+  vosPos: 0,
+  vosVoorsprong: 0,   // voorsprong van de vos bij start rekenronde (als hij de rit won)
+  stappen: 7,
+  vraag: null,
+  bezig: false,
+  tijdRest: 0,
+  tijdId: null,
+  geluidAan: true
+};
+
+// kleine hulp: spreek de speler aan (met of zonder naam)
+function held(){ return staat.naam ? staat.naam : "held"; }
+
+/* ====================== SCHERMEN ====================== */
+function toon(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+function zetBg(css){ document.body.style.background = css; }
+
+function naarStart(){
+  if (typeof stopTimer === 'function') stopTimer();
+  staat.score = 0;
+  staat.hoogsteVrij = 0;
+  zetBg("linear-gradient(160deg,#ffd6ec,#e7d6ff)");
+  document.getElementById('naamInput').value = staat.naam;
+  toon('startScreen');
+}
+
+function startAvontuur(){
+  staat.naam = document.getElementById('naamInput').value.trim().slice(0, 14);
+  staat.score = 0;
+  staat.hoogsteVrij = 0;
+  bouwKaart();
+  naarKaart();
+}
+
+function naarKaart(){
+  if (typeof stopTimer === 'function') stopTimer();
+  bouwKaart();
+  zetBg("linear-gradient(160deg,#ffd0e8,#dcc6ff)");
+  document.getElementById('reisOndertitel').textContent =
+    (staat.naam ? staat.naam + ', klik' : 'Klik') + ' op de gloeiende plek om verder te gaan.';
+  toon('mapScreen');
+}
+
+function bouwKaart(){
+  const lijst = document.getElementById('reisLijst');
+  lijst.innerHTML = '';
+  WERELDEN.forEach((w, i) => {
+    const li = document.createElement('li');
+    let status = '';
+    let rechts = '';
+    if (i < staat.hoogsteVrij) { status = 'klaar'; rechts = '<span class="vink">✅</span>'; }
+    else if (i === staat.hoogsteVrij) { status = 'nu'; rechts = '<span class="vink">▶️</span>'; }
+    else { status = 'op-slot'; rechts = '<span class="vink">🔒</span>'; }
+    li.className = status;
+    li.innerHTML = `
+      <span class="w-emoji">${w.emoji}</span>
+      <span class="w-tekst">
+        <span class="w-naam">${w.naam}</span><br>
+        <span class="w-stap">${w.stap}</span>
+      </span>${rechts}`;
+    if (status === 'nu') li.onclick = () => kiesWereld(i);
+    lijst.appendChild(li);
+  });
+}
+
+function kiesWereld(i){
+  staat.wereldIndex = i;
+  const w = WERELDEN[i];
+  document.getElementById('verhaalEmoji').textContent = w.emoji;
+  document.getElementById('verhaalStap').textContent = w.stap;
+  document.getElementById('verhaalTitel').textContent = w.titel;
+  document.getElementById('verhaalTekst').textContent = w.tekst;
+  document.getElementById('verhaalKnop').textContent = (i === WERELDEN.length-1) ? "Naar de eindstrijd! ⚔️" : "Rijden maar! 🏁";
+  zetBg(w.bg);
+  toon('storyScreen');
+}
+
+/* ====================== RIT (top-down racen) ====================== */
+let rit = null;
+
+// unieke superkracht per wereld (de ster pak je op)
+// type 'turbo' = onkwetsbaar + extra snelheid; type 'remvos' = onkwetsbaar + rivalen vertragen
+const POWERS = [
+  { naam: 'Sterkracht',      emoji: '⭐', type: 'turbo'  }, // Knuffiebos
+  { naam: 'Windvlaag',       emoji: '🍃', type: 'turbo'  }, // Roep van de Uil
+  { naam: 'Vertraagstraal',  emoji: '🔦', type: 'remvos' }, // Donkere Grot
+  { naam: 'Stroomstoot',     emoji: '💧', type: 'turbo'  }, // Wilde Rivier
+  { naam: 'Schaduwschild',   emoji: '🛡️', type: 'remvos' }  // Kasteel
+];
+
+function startRit(){
+  const w = WERELDEN[staat.wereldIndex];
+  const thema = RIT_THEMA[staat.wereldIndex];
+  const canvas = document.getElementById('raceCanvas');
+  const ctx = canvas.getContext('2d');
+  zetBg(w.bg);
+  document.getElementById('ritWereld').textContent = `🏁 Race naar ${w.naam}`;
+
+  const W = canvas.width, H = canvas.height;
+  const wi = staat.wereldIndex;
+  const power = POWERS[wi];
+  // extra uitdagers verschijnen (en worden talrijker) naarmate je verder komt
+  const extra = [];
+  if (wi >= 1) extra.push({ dist: 0, basis: 4.7 + wi * 0.16, emoji: '🐺', kleur: '#717784' });
+  if (wi >= 4) extra.push({ dist: 0, basis: 5.4,             emoji: '🦅', kleur: '#5a4633' });
+  const racers = extra.length ? ' Let op de tegenstanders ' + extra.map(e => e.emoji).join('') + '!' : '!';
+  document.getElementById('ritTip').textContent =
+    `${held()}, race naar de finish 🏁! Pak ${power.emoji} ${power.naam} en wees onverslaanbaar.` + racers;
+  rit = {
+    canvas, ctx, W, H, thema, power, wi,
+    kartX: W/2, kartY: H - 92,
+    kartB: 42, kartH: 54,
+    dir: 0, pointerX: null,
+    dist: 0, vosDist: 0, extra,
+    doel: 6200 + wi * 700,                       // langere race met duidelijke finish
+    speed: 5.4, maxSpeed: 5.8,
+    vosBasis: 5.0 + wi * 0.18,                   // echte, oplopende snelheid per wereld
+    wegHalf: 112 - wi * 3,                        // breder pad, milde versmalling
+    obstakels: [], wortels: [], sterren: [],
+    genTot: 280,
+    crashKoeling: 0, offRoad: false, boost: 0,
+    wortelsGepakt: 0, sterGepakt: 0,
+    klaar: false, uitslag: '', eindTimer: 0, raf: null, scroll: 0
+  };
+  zetRitInvoer(true);
+  document.getElementById('ritWortels').textContent = '🥕 0';
+  document.getElementById('ritAfstand').textContent = '1e · 0%';
+  toon('raceScreen');
+  rit.raf = requestAnimationFrame(ritLoop);
+}
+
+// horizontale midden van de weg op afstand d (de bochten)
+function ritCenterX(d){
+  return rit.W/2 + Math.sin(d/620) * 52 + Math.sin(d/250 + 1.3) * 16;
+}
+
+function ritLoop(){
+  if (!rit) return;
+  ritUpdate();
+  ritTeken();
+  if (rit.klaar && rit.eindTimer <= 0){ ritKlaar(); return; }
+  rit.raf = requestAnimationFrame(ritLoop);
+}
+
+function ritUpdate(){
+  const r = rit;
+  if (r.klaar){ r.eindTimer--; return; }
+
+  // power actief? (ster opgepakt) -> onkwetsbaar
+  if (r.boost > 0) r.boost--;
+  const onkwetsbaar = r.boost > 0;
+  const turbo = onkwetsbaar && r.power.type === 'turbo';
+
+  // snelheid: turbo bij power, milde straf bij crash of naast de weg
+  let doelSpeed = r.maxSpeed;
+  if (turbo){ doelSpeed = r.maxSpeed * 1.55; }
+  else if (r.crashKoeling > 0){ doelSpeed = 2.8; r.crashKoeling--; }
+  else if (r.offRoad){ doelSpeed = 3.7; }
+  r.speed += (doelSpeed - r.speed) * 0.16;
+  r.dist += r.speed;
+  r.scroll += r.speed;
+
+  // vos en extra uitdagers rijden hun eigen tempo (geen aanpassing aan jou);
+  // alleen bij een héél grote voorsprong een milde inhaal, en 'remvos' vertraagt ze
+  const rivaalFactor = (onkwetsbaar && r.power.type === 'remvos') ? 0.35 : 1;
+  const rivalStap = (basis, eigenDist) => {
+    let sp = basis;
+    if (r.dist - eigenDist > 650) sp += 0.4;   // alleen als jij ver vooruit ligt
+    return sp * rivaalFactor;
+  };
+  r.vosDist += rivalStap(r.vosBasis, r.vosDist);
+  r.extra.forEach(e => { e.dist += rivalStap(e.basis, e.dist); });
+
+  // sturen
+  if (r.pointerX !== null) r.kartX += (r.pointerX - r.kartX) * 0.3;
+  else r.kartX += r.dir * 7;
+  r.kartX = Math.max(r.kartB/2, Math.min(r.W - r.kartB/2, r.kartX));
+
+  // naast de weg? (ruime marge; tijdens power telt het niet)
+  const cx = ritCenterX(r.dist);
+  r.offRoad = !onkwetsbaar && Math.abs(r.kartX - cx) > (r.wegHalf - r.kartB/2 + 12);
+
+  // items vooruit maken
+  while (r.genTot < r.dist + r.H + 80){
+    const voortgang = r.dist / r.doel;
+    r.genTot += Math.max(82, rnd(140, 230) - voortgang * 45 - r.wi * 14);  // dichter in latere werelden
+    const off = rnd(-(r.wegHalf - 24), r.wegHalf - 24);
+    const k = Math.random();
+    if (k < 0.60)      r.obstakels.push({ dist: r.genTot, off, emoji: kies(r.thema.obstakels), maat: 32 });
+    else if (k < 0.88) r.wortels.push({ dist: r.genTot, off, maat: 28 });   // ~12% kans op een power
+    else               r.sterren.push({ dist: r.genTot, off, maat: 30 });
+  }
+
+  // botsingen (op schermpositie)
+  const schermY = o => r.kartY - (o.dist - r.dist);
+  const wereldX = o => ritCenterX(o.dist) + o.off;
+  const raakt = o => Math.abs(schermY(o) - r.kartY) < 30 && Math.abs(wereldX(o) - r.kartX) < 30;
+
+  r.obstakels = r.obstakels.filter(o => {
+    if (raakt(o)){
+      if (onkwetsbaar){ speel('goed'); return false; }   // met power knal je er dwars doorheen
+      if (r.crashKoeling <= 0){ r.crashKoeling = 28; r.speed = 2.8; speel('fout'); }
+      return false;
+    }
+    return schermY(o) < r.H + 50;
+  });
+  r.wortels = r.wortels.filter(o => {
+    if (raakt(o)){
+      r.wortelsGepakt++;
+      document.getElementById('ritWortels').textContent = '🥕 ' + r.wortelsGepakt;
+      speel('goed');
+      return false;
+    }
+    return schermY(o) < r.H + 50;
+  });
+  r.sterren = r.sterren.filter(o => {
+    if (raakt(o)){
+      r.sterGepakt++;
+      r.boost = 150;                // ~2,5 sec superkracht
+      speel('win');
+      return false;
+    }
+    return schermY(o) < r.H + 50;
+  });
+
+  // positie (1e/2e/3e) en voortgang
+  const voor = (r.vosDist > r.dist ? 1 : 0) + r.extra.filter(e => e.dist > r.dist).length;
+  document.getElementById('ritAfstand').textContent = (voor + 1) + 'e · ' + Math.min(100, Math.round(r.dist / r.doel * 100)) + '%';
+
+  // finish?
+  if (r.dist >= r.doel){ r.klaar = true; r.uitslag = 'win'; r.eindTimer = 80; speel('win'); }
+  else if (r.vosDist >= r.doel){ r.klaar = true; r.uitslag = 'verlies'; r.eindTimer = 80; speel('fout'); }
+}
+
+function ritTeken(){
+  const r = rit, ctx = r.ctx, W = r.W, H = r.H;
+  // berm
+  ctx.fillStyle = r.thema.rand;
+  ctx.fillRect(0, 0, W, H);
+  // weg per rij (zo ontstaan de bochten)
+  const stap = 8;
+  for (let y = 0; y < H; y += stap){
+    const d = r.dist + (r.kartY - y);
+    const cx = ritCenterX(d);
+    ctx.fillStyle = r.thema.weg;
+    ctx.fillRect(cx - r.wegHalf, y, r.wegHalf * 2, stap + 1);
+    ctx.fillStyle = 'rgba(255,255,255,0.55)';
+    ctx.fillRect(cx - r.wegHalf, y, 5, stap + 1);
+    ctx.fillRect(cx + r.wegHalf - 5, y, 5, stap + 1);
+    if (Math.floor(d / 36) % 2 === 0) ctx.fillRect(cx - 3, y, 6, stap + 1);   // middenstreep
+  }
+  // finishlijn (geblokt) — verschijnt als je het einde nadert
+  const yFin = r.kartY - (r.doel - r.dist);
+  if (yFin > -30 && yFin < H + 30){
+    const cxF = ritCenterX(r.doel);
+    const blok = 16;
+    for (let i = 0; i * blok < r.wegHalf * 2; i++){
+      ctx.fillStyle = (i % 2 === 0) ? '#222' : '#fff';
+      ctx.fillRect(cxF - r.wegHalf + i * blok, yFin - 9, blok, 9);
+      ctx.fillStyle = (i % 2 === 0) ? '#fff' : '#222';
+      ctx.fillRect(cxF - r.wegHalf + i * blok, yFin, blok, 9);
+    }
+    ctx.font = '24px serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('🏁', cxF - r.wegHalf - 4, yFin);
+    ctx.fillText('🏁', cxF + r.wegHalf + 4, yFin);
+  }
+  // items
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  const schermY = o => r.kartY - (o.dist - r.dist);
+  r.wortels.forEach(o => { const y = schermY(o); if (y > -40 && y < H + 40){ ctx.font = o.maat + 'px serif'; ctx.fillText('🥕', ritCenterX(o.dist) + o.off, y); } });
+  r.sterren.forEach(o => { const y = schermY(o); if (y > -40 && y < H + 40){ ctx.font = o.maat + 'px serif'; ctx.fillText(r.power.emoji, ritCenterX(o.dist) + o.off, y); } });
+  r.obstakels.forEach(o => { const y = schermY(o); if (y > -40 && y < H + 40){ ctx.font = o.maat + 'px serif'; ctx.fillText(o.emoji, ritCenterX(o.dist) + o.off, y); } });
+  // rivalen (altijd zichtbaar; gepind aan de rand als ze ver weg zijn)
+  r.extra.forEach(e => ritTekenRival(ctx, e.dist, e.kleur, e.emoji));
+  ritTekenRival(ctx, r.vosDist, '#e2502a', '🦊');
+  // onkwetsbaar-effect (power actief): glinster + label
+  if (r.boost > 0){
+    ctx.font = '22px serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('✨', r.kartX - 28, r.kartY);
+    ctx.fillText('✨', r.kartX + 28, r.kartY);
+    if (r.power.type === 'turbo') ctx.fillText('💨', r.kartX, r.kartY + 34);
+    ctx.fillStyle = '#fff'; ctx.font = 'bold 16px "Comic Sans MS", sans-serif';
+    ctx.fillText(r.power.emoji + ' ' + r.power.naam + '!', W/2, 40);
+  }
+  // konijn (knippert bij power = onkwetsbaar, of kort na een crash)
+  ritTekenKart(ctx, r.kartX, r.kartY, r.boost > 0 || r.crashKoeling > 0, '#ff4fa3', '🐰');
+  // race-balk
+  ritTekenBalk(ctx, W, r);
+
+  // finish-overlay
+  if (r.klaar){
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.fillRect(0, H/2 - 70, W, 140);
+    ctx.fillStyle = '#fff'; ctx.textAlign = 'center';
+    ctx.font = 'bold 30px "Comic Sans MS", sans-serif';
+    ctx.fillText(r.uitslag === 'win' ? '🏆 Jij wint!' : '🦊 Vos was sneller!', W/2, H/2 - 16);
+    ctx.font = 'bold 20px "Comic Sans MS", sans-serif';
+    ctx.fillText('+' + r.wortelsGepakt + ' 🥕   +' + r.sterGepakt + ' ⭐' + (r.uitslag === 'win' ? '   🏆+25' : ''), W/2, H/2 + 22);
+  }
+}
+
+function ritTekenBalk(ctx, W, r){
+  const x0 = 18, x1 = W - 26, bw = x1 - x0, y = 16;
+  ctx.fillStyle = 'rgba(0,0,0,0.28)';
+  rondeRect(ctx, x0, y - 7, bw + 12, 14, 7); ctx.fill();
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.font = '16px serif';
+  r.extra.forEach(e => ctx.fillText(e.emoji, x0 + bw * Math.min(1, e.dist / r.doel), y));
+  ctx.font = '18px serif';
+  ctx.fillText('🦊', x0 + bw * Math.min(1, r.vosDist / r.doel), y);
+  ctx.fillText('🐰', x0 + bw * Math.min(1, r.dist / r.doel), y);
+  ctx.font = '15px serif';
+  ctx.fillText('🏁', x1 + 6, y);
+}
+
+function ritTekenKart(ctx, x, y, knippert, kleur, emoji){
+  ctx.save();
+  const flits = knippert && Math.floor(Date.now()/100) % 2 === 0;
+  ctx.globalAlpha *= flits ? 0.4 : 1;
+  ctx.fillStyle = '#222';
+  ctx.fillRect(x - 24, y - 15, 10, 22);
+  ctx.fillRect(x + 14, y - 15, 10, 22);
+  ctx.fillRect(x - 24, y + 5, 10, 22);
+  ctx.fillRect(x + 14, y + 5, 10, 22);
+  ctx.fillStyle = kleur;
+  rondeRect(ctx, x - 20, y - 24, 40, 54, 13); ctx.fill();
+  ctx.fillStyle = '#ffd93d';
+  rondeRect(ctx, x - 12, y - 15, 24, 20, 7); ctx.fill();
+  ctx.font = '26px serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(emoji, x, y + 2);
+  ctx.restore();
+}
+
+// teken een rivaal; pin aan de rand met een pijl als hij ver voor/achter ligt
+function ritTekenRival(ctx, dist, kleur, emoji){
+  const r = rit, H = r.H;
+  let y = r.kartY - (dist - r.dist);
+  let pijl = 0;
+  if (y < 36){ y = 36; pijl = -1; }              // ver vooruit
+  else if (y > H - 26){ y = H - 26; pijl = 1; }  // ver achter
+  const x = ritCenterX(dist);
+  ctx.save();
+  if (pijl !== 0) ctx.globalAlpha = 0.72;
+  ritTekenKart(ctx, x, y, false, kleur, emoji);
+  ctx.restore();
+  if (pijl !== 0){
+    ctx.fillStyle = kleur;
+    ctx.font = 'bold 16px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(pijl < 0 ? '▲' : '▼', x, pijl < 0 ? y - 28 : y + 30);
+  }
+}
+
+function rondeRect(ctx, x, y, w, h, r){
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+function ritKlaar(){
+  zetRitInvoer(false);
+  if (rit && rit.raf) cancelAnimationFrame(rit.raf);
+  const gewonnen = rit && rit.uitslag === 'win';
+  staat.score += (rit ? rit.wortelsGepakt * 5 + rit.sterGepakt * 10 : 0) + (gewonnen ? 25 : 0);
+  staat.vosVoorsprong = gewonnen ? 0 : 1;   // vos start 1 stap voor in de rekenronde als hij de rit won
+  rit = null;
+  startRace();
+}
+
+/* invoer voor de rit (toetsen, knoppen, aanraken) */
+let _ritKeyDown, _ritKeyUp, _ritPdown, _ritPmove, _ritPup;
+function zetRitInvoer(aan){
+  const canvas = document.getElementById('raceCanvas');
+  const linkK = document.getElementById('linkKnop');
+  const rechtsK = document.getElementById('rechtsKnop');
+  if (aan){
+    _ritKeyDown = e => {
+      if (!rit) return;
+      if (e.key === 'ArrowLeft' || e.key === 'a') rit.dir = -1;
+      if (e.key === 'ArrowRight' || e.key === 'd') rit.dir = 1;
+    };
+    _ritKeyUp = e => {
+      if (!rit) return;
+      if (['ArrowLeft','a','ArrowRight','d'].includes(e.key)) rit.dir = 0;
+    };
+    window.addEventListener('keydown', _ritKeyDown);
+    window.addEventListener('keyup', _ritKeyUp);
+
+    const knopAan = d => () => { if (rit) rit.dir = d; };
+    const knopUit = () => { if (rit) rit.dir = 0; };
+    linkK.onpointerdown = knopAan(-1); linkK.onpointerup = knopUit; linkK.onpointerleave = knopUit;
+    rechtsK.onpointerdown = knopAan(1); rechtsK.onpointerup = knopUit; rechtsK.onpointerleave = knopUit;
+
+    const naarCanvasX = e => {
+      const rect = canvas.getBoundingClientRect();
+      return (e.clientX - rect.left) * (canvas.width / rect.width);
+    };
+    _ritPdown = e => { if (rit){ rit.pointerX = naarCanvasX(e); } };
+    _ritPmove = e => { if (rit && rit.pointerX !== null){ rit.pointerX = naarCanvasX(e); } };
+    _ritPup   = () => { if (rit) rit.pointerX = null; };
+    canvas.addEventListener('pointerdown', _ritPdown);
+    canvas.addEventListener('pointermove', _ritPmove);
+    window.addEventListener('pointerup', _ritPup);
+  } else {
+    window.removeEventListener('keydown', _ritKeyDown);
+    window.removeEventListener('keyup', _ritKeyUp);
+    canvas.removeEventListener('pointerdown', _ritPdown);
+    canvas.removeEventListener('pointermove', _ritPmove);
+    window.removeEventListener('pointerup', _ritPup);
+    linkK.onpointerdown = rechtsK.onpointerdown = null;
+  }
+}
+
+/* ====================== RACE ====================== */
+function startRace(){
+  const w = WERELDEN[staat.wereldIndex];
+  staat.knuffiePos = 0;
+  staat.vosPos = staat.vosVoorsprong || 0;
+  staat.vosVoorsprong = 0;
+  staat.stappen = w.stappen;
+  staat.bezig = false;
+  document.getElementById('doel').textContent = w.doel;
+  document.getElementById('hudWereld').textContent = `${w.emoji} ${w.naam}`;
+  zetBg(w.bg);
+  updateHud();
+  tekenBaan();
+  document.getElementById('feedback').textContent = '';
+  toon('gameScreen');
+  nieuweVraag();
+}
+
+function updateHud(){
+  document.getElementById('hudScore').textContent = '⭐ ' + staat.score;
+}
+
+/* ----- tijd per som (de vos stapt als de tijd op is) ----- */
+function startTimer(){
+  stopTimer();
+  staat.tijdMax = NIVEAUS[staat.niveau].tijd;
+  staat.tijdRest = staat.tijdMax;
+  updateTijdUI();
+  staat.tijdId = setInterval(() => {
+    staat.tijdRest -= 0.1;
+    updateTijdUI();
+    if (staat.tijdRest <= 0) tijdOp();
+  }, 100);
+}
+function stopTimer(){ if (staat.tijdId){ clearInterval(staat.tijdId); staat.tijdId = null; } }
+function updateTijdUI(){
+  const rest = Math.max(0, staat.tijdRest);
+  document.getElementById('hudTimer').textContent = '⏱️ ' + Math.ceil(rest);
+  const vul = document.getElementById('tijdVul');
+  vul.style.width = (rest / staat.tijdMax * 100) + '%';
+  vul.style.background = rest < 2 ? 'var(--rood)' : (rest < 3.4 ? '#ffb02e' : 'var(--groen)');
+}
+
+// vos zet een stap (bij fout antwoord of als de tijd op is); true = vos heeft gewonnen
+function vosStapt(){
+  staat.vosPos++;
+  speel('fout');
+  const v = document.getElementById('vos');
+  v.classList.remove('hop'); void v.offsetWidth; v.classList.add('hop');
+  tekenBaan();
+  if (staat.vosPos >= staat.stappen){ stopTimer(); setTimeout(wereldMislukt, 900); return true; }
+  return false;
+}
+
+function tijdOp(){
+  if (!staat.bezig) return;
+  staat.bezig = false;
+  stopTimer();
+  document.querySelectorAll('.antwoord').forEach(b => {
+    b.disabled = true;
+    if (Number(b.textContent) === staat.vraag.ans) b.classList.add('goed');
+  });
+  const fb = document.getElementById('feedback');
+  fb.textContent = `Te langzaam! ⏰ Het was ${staat.vraag.ans}.`;
+  fb.className = 'feedback fout';
+  if (vosStapt()) return;
+  setTimeout(() => { document.getElementById('feedback').textContent = ''; nieuweVraag(); }, 1100);
+}
+
+function tekenBaan(){
+  const breedte = 84; // % van de baan voor beweging
+  const kPct = 4 + (staat.knuffiePos / staat.stappen) * breedte;
+  const vPct = 4 + (staat.vosPos / staat.stappen) * breedte;
+  document.getElementById('knuffie').style.left = kPct + '%';
+  document.getElementById('vos').style.left = vPct + '%';
+}
+
+/* ----- vragen ----- */
+function rnd(min, max){ return Math.floor(Math.random()*(max-min+1))+min; }
+function kies(arr){ return arr[rnd(0, arr.length-1)]; }
+
+function maakSom(tier){
+  let a, b, ans, tekst;
+  switch(tier){
+    case 1: { // +/- tot 20
+      if (Math.random()<0.5){ a=rnd(2,18); b=rnd(1,20-a); ans=a+b; tekst=`${a} + ${b}`; }
+      else { a=rnd(5,20); b=rnd(1,a); ans=a-b; tekst=`${a} − ${b}`; }
+      break;
+    }
+    case 2: { // +/- tot 100, tafels 2/5/10
+      const k = Math.random();
+      if (k<0.4){ a=rnd(10,80); b=rnd(5,99-a); ans=a+b; tekst=`${a} + ${b}`; }
+      else if (k<0.7){ a=rnd(20,99); b=rnd(5,a); ans=a-b; tekst=`${a} − ${b}`; }
+      else { a=kies([2,5,10]); b=rnd(1,10); ans=a*b; tekst=`${a} × ${b}`; }
+      break;
+    }
+    case 3: { // tafels 1-10, +/- tot 100
+      if (Math.random()<0.6){ a=rnd(1,10); b=rnd(1,10); ans=a*b; tekst=`${a} × ${b}`; }
+      else if (Math.random()<0.5){ a=rnd(20,90); b=rnd(10,99-a); ans=a+b; tekst=`${a} + ${b}`; }
+      else { a=rnd(30,99); b=rnd(10,a); ans=a-b; tekst=`${a} − ${b}`; }
+      break;
+    }
+    case 4: { // x tot 10, : exact, +/- tot 1000
+      const k=Math.random();
+      if (k<0.4){ a=rnd(2,10); b=rnd(2,10); ans=a*b; tekst=`${a} × ${b}`; }
+      else if (k<0.7){ ans=rnd(2,10); b=rnd(2,10); a=ans*b; tekst=`${a} : ${b}`; }
+      else { a=rnd(100,800); b=rnd(50,199); if(Math.random()<0.5){ans=a+b;tekst=`${a} + ${b}`;} else {if(b>a){[a,b]=[b,a];} ans=a-b; tekst=`${a} − ${b}`;} }
+      break;
+    }
+    case 5: { // x tot 12, : exact tot 12, +/- tot 1000
+      const k=Math.random();
+      if (k<0.4){ a=rnd(3,12); b=rnd(3,12); ans=a*b; tekst=`${a} × ${b}`; }
+      else if (k<0.7){ ans=rnd(3,12); b=rnd(3,12); a=ans*b; tekst=`${a} : ${b}`; }
+      else { a=rnd(200,900); b=rnd(50,300); if(Math.random()<0.5){ans=a+b;tekst=`${a} + ${b}`;} else {if(b>a){[a,b]=[b,a];} ans=a-b; tekst=`${a} − ${b}`;} }
+      break;
+    }
+    default: { // tier 6: 2-cijferig x 1-cijferig, : groter, gemengd
+      const k=Math.random();
+      if (k<0.45){ a=rnd(11,29); b=rnd(3,9); ans=a*b; tekst=`${a} × ${b}`; }
+      else if (k<0.75){ ans=rnd(4,15); b=rnd(3,9); a=ans*b; tekst=`${a} : ${b}`; }
+      else { a=rnd(11,20); b=rnd(11,20); ans=a*b; tekst=`${a} × ${b}`; }
+      break;
+    }
+  }
+  return { tekst: tekst + " = ?", ans };
+}
+
+function maakOpties(ans){
+  const set = new Set([ans]);
+  const spreiding = ans <= 12 ? 4 : (ans <= 100 ? 9 : 25);
+  let pogingen = 0;
+  while (set.size < 4 && pogingen < 50){
+    pogingen++;
+    let kandidaat = ans + rnd(-spreiding, spreiding);
+    if (kandidaat < 0) kandidaat = ans + rnd(1, spreiding);
+    if (kandidaat !== ans) set.add(kandidaat);
+  }
+  // vul aan als nodig
+  let extra = 1;
+  while (set.size < 4){ set.add(ans + extra); extra++; }
+  const arr = [...set];
+  // shuffle
+  for (let i = arr.length-1; i>0; i--){ const j=rnd(0,i); [arr[i],arr[j]]=[arr[j],arr[i]]; }
+  return arr;
+}
+
+function nieuweVraag(){
+  const tier = NIVEAUS[staat.niveau].tiers[staat.wereldIndex];
+  staat.vraag = maakSom(tier);
+  document.getElementById('vraag').textContent = staat.vraag.tekst;
+  const opties = maakOpties(staat.vraag.ans);
+  const bak = document.getElementById('antwoorden');
+  bak.innerHTML = '';
+  opties.forEach(o => {
+    const b = document.createElement('button');
+    b.className = 'antwoord';
+    b.textContent = o;
+    b.onclick = () => antwoord(o, b);
+    bak.appendChild(b);
+  });
+  staat.bezig = true;
+  startTimer();
+}
+
+function antwoord(keuze, knop){
+  if (!staat.bezig) return;
+  staat.bezig = false;
+  stopTimer();
+  const goed = (keuze === staat.vraag.ans);
+  const fb = document.getElementById('feedback');
+  document.querySelectorAll('.antwoord').forEach(b => {
+    b.disabled = true;
+    if (Number(b.textContent) === staat.vraag.ans) b.classList.add('goed');
+  });
+  if (goed){
+    knop.classList.add('goed');
+    speel('goed');
+    staat.score += 10;
+    staat.knuffiePos++;
+    fb.textContent = kies([`Top, ${held()}! 🥕`, 'Hop hop! 🐰', `Goed zo, ${held()}! ⭐`, 'Knap! 💪']);
+    fb.className = 'feedback goed';
+    const k = document.getElementById('knuffie');
+    k.classList.remove('hop'); void k.offsetWidth; k.classList.add('hop');
+    tekenBaan();
+    updateHud();
+    if (staat.knuffiePos >= staat.stappen){ setTimeout(wereldGehaald, 700); return; }
+    setTimeout(() => { document.getElementById('feedback').textContent = ''; nieuweVraag(); }, 650);
+  } else {
+    knop.classList.add('fout');
+    fb.textContent = `Bijna! Het was ${staat.vraag.ans}.`;
+    fb.className = 'feedback fout';
+    if (vosStapt()) return;
+    setTimeout(() => { document.getElementById('feedback').textContent = ''; nieuweVraag(); }, 1100);
+  }
+}
+
+function wereldGehaald(){
+  stopTimer();
+  const laatste = (staat.wereldIndex === WERELDEN.length - 1);
+  if (staat.wereldIndex + 1 > staat.hoogsteVrij) staat.hoogsteVrij = staat.wereldIndex + 1;
+  speel('win');
+  if (laatste){ spelGewonnen(); return; }
+  const sterren = staat.vosPos === 0 ? '⭐⭐⭐' : (staat.vosPos <= 2 ? '⭐⭐' : '⭐');
+  document.getElementById('clearTitel').textContent = WERELDEN[staat.wereldIndex].naam + ' gehaald!';
+  document.getElementById('clearTekst').textContent = kies([
+    'Knapper dan ooit huppelt Knuffie verder.',
+    'De Schaduwvos kijkt boos toe. Knuffie wint de race!',
+    'Een stap dichter bij de Gouden Wortel!'
+  ]);
+  document.getElementById('clearSterren').textContent = sterren;
+  toon('clearScreen');
+}
+
+function wereldMislukt(){
+  stopTimer();
+  speel('fout');
+  toon('failScreen');
+}
+
+function spelGewonnen(){
+  if (staat.naam){
+    document.getElementById('winTekst').textContent =
+      `Knuffie greep de Gouden Wortel! Het hele Knuffiebos kleurt weer warm en groen. Alle dieren juichen. Knuffie is geen gewoon konijn meer — hij is de held van het bos. En jij hebt hem geholpen, ${staat.naam}. Dankjewel, dappere rekenheld!`;
+  }
+  document.getElementById('winScore').textContent = `Je verzamelde ⭐ ${staat.score} sterren onderweg!`;
+  staat.hoogsteVrij = WERELDEN.length;
+  zetBg("linear-gradient(160deg,#ffe0b8,#ffc6e8)");
+  toon('winScreen');
+}
+
+/* ====================== NIVEAU KIEZEN ====================== */
+document.getElementById('moeilijkRij').addEventListener('click', e => {
+  const knop = e.target.closest('.moeilijk-knop');
+  if (!knop) return;
+  document.querySelectorAll('.moeilijk-knop').forEach(k => k.classList.remove('gekozen'));
+  knop.classList.add('gekozen');
+  staat.niveau = knop.dataset.niveau;
+});
+
+/* ====================== AANKLEEDSPEL ====================== */
+const KLEDING = {
+  Topjes: { tab: '👕', type: 'top', items: [
+    { id:'top_roze',  naam:'Roze shirt',  kleur:'#ff7eb6', gratis:true },
+    { id:'top_groen', naam:'Groen shirt',  kleur:'#83d86b', gratis:true },
+    { id:'top_geel',  naam:'Gele trui',    kleur:'#ffc83d', gratis:false },
+    { id:'top_blauw', naam:'Blauw topje',  kleur:'#5aa9ff', gratis:false },
+    { id:'top_paars', naam:'Paars topje',  kleur:'#a06bff', gratis:false },
+    { id:'top_rood',  naam:'Rode trui',    kleur:'#ff6b6b', gratis:false },
+  ]},
+  Broeken: { tab: '👖', type: 'broek', items: [
+    { id:'broek_spijker', naam:'Spijkerbroek', kleur:'#5a82c8', gratis:true },
+    { id:'broek_zwart',   naam:'Zwarte broek',  kleur:'#4a4a55', gratis:false },
+    { id:'broek_roze',    naam:'Roze broek',    kleur:'#ff8cc4', gratis:false },
+    { id:'broek_mint',    naam:'Mintbroek',     kleur:'#74e0c0', gratis:false },
+  ]},
+  Rokjes: { tab: '🩳', type: 'rok', items: [
+    { id:'rok_paars', naam:'Paars rokje', kleur:'#b07bff', gratis:true },
+    { id:'rok_geel',  naam:'Geel rokje',  kleur:'#ffd84d', gratis:false },
+    { id:'rok_rood',  naam:'Rood rokje',  kleur:'#ff6f8b', gratis:false },
+    { id:'rok_blauw', naam:'Blauw rokje', kleur:'#6cc0ff', gratis:false },
+  ]},
+  Jurken: { tab: '👗', type: 'jurk', items: [
+    { id:'jurk_roze',  naam:'Roze jurk',   kleur:'#ff7eb6', gratis:true },
+    { id:'jurk_paars', naam:'Paarse jurk', kleur:'#9d6bff', gratis:false },
+    { id:'jurk_goud',  naam:'Gouden jurk', kleur:'#f4c542', gratis:false },
+    { id:'jurk_groen', naam:'Groene jurk', kleur:'#74cf83', gratis:false },
+  ]},
+  Accessoires: { tab: '🎀', type: 'hoofd', items: [
+    { id:'acc_strik',     naam:'Roze strik',   kleur:'#ff5ea8', vorm:'strik', gratis:true },
+    { id:'acc_kroon',     naam:'Kroon',        kleur:'#ffd23d', vorm:'kroon', gratis:false },
+    { id:'acc_bloem',     naam:'Bloem',        kleur:'#ff7eb6', vorm:'bloem', gratis:false },
+    { id:'acc_strikblauw',naam:'Blauwe strik', kleur:'#5aa9ff', vorm:'strik', gratis:false },
+  ]},
+  Schoenen: { tab: '👟', type: 'schoen', items: [
+    { id:'schoen_wit',  naam:'Witte schoenen', kleur:'#f4f4f8', gratis:true },
+    { id:'schoen_roze', naam:'Roze schoenen',  kleur:'#ff7eb6', gratis:false },
+    { id:'schoen_rood', naam:'Rode laarzen',   kleur:'#ff5b5b', gratis:false },
+    { id:'schoen_geel', naam:'Gele schoenen',  kleur:'#ffce3d', gratis:false },
+  ]},
+  Brillen: { tab: '👓', type: 'bril', items: [
+    { id:'bril_zwart',  naam:'Zwarte bril',    kleur:'#222',    gratis:true },
+    { id:'bril_roze',   naam:'Roze bril',      kleur:'#ff5ea8', gratis:false },
+    { id:'bril_blauw',  naam:'Blauwe bril',    kleur:'#4d96ff', gratis:false },
+    { id:'bril_zon',    naam:'Zonnebril',      kleur:'#1a1a1a', vorm:'zon', gratis:false },
+    { id:'bril_hartje', naam:'Hartjesbril',    kleur:'#ff5ea8', vorm:'hart', gratis:false },
+  ]},
+  Tassen: { tab: '👜', type: 'tas', items: [
+    { id:'tas_roze',  naam:'Roze tas',  kleur:'#ff7eb6', gratis:true },
+    { id:'tas_paars', naam:'Paarse tas', kleur:'#9d6bff', gratis:false },
+    { id:'tas_geel',  naam:'Gele tas',   kleur:'#ffce3d', gratis:false },
+    { id:'tas_rood',  naam:'Rode tas',   kleur:'#ff5b5b', gratis:false },
+    { id:'tas_groen', naam:'Groene tas', kleur:'#5ec26a', gratis:false },
+  ]},
+};
+Object.keys(KLEDING).forEach(cat => KLEDING[cat].items.forEach(it => it.type = KLEDING[cat].type));
+const TAB_KLEUR = { Topjes:'#ffd0e4', Broeken:'#cfe0ff', Rokjes:'#ffe3b0', Jurken:'#e6d2ff', Accessoires:'#ffd0d0', Schoenen:'#d2f3d8', Brillen:'#d6dff5', Tassen:'#fbdbc4' };
+
+const dress = {
+  cat: 'Topjes', modus: 'studio',
+  uit: { top:null, broek:null, rok:null, jurk:null, hoofd:null, bril:null, tas:null, schoen:null },
+  ontgrendeld: null, hangend: null, quiz: null, terugNaar: 'startScreen'
+};
+let dressCtx = null;
+
+function laadOntgrendeld(){ try { return JSON.parse(localStorage.getItem('knuffie_kleding') || '[]'); } catch(e){ return []; } }
+function bewaarOntgrendeld(){ try { localStorage.setItem('knuffie_kleding', JSON.stringify(dress.ontgrendeld)); } catch(e){} }
+function isVrij(item){ return item.gratis || (dress.ontgrendeld || []).includes(item.id); }
+
+function openDress(){
+  if (!dress.ontgrendeld) dress.ontgrendeld = laadOntgrendeld();
+  const a = document.querySelector('.screen.active');
+  dress.terugNaar = a ? a.id : 'startScreen';
+  dressCtx = document.getElementById('dressCanvas').getContext('2d');
+  zetBg('linear-gradient(160deg,#7b5bb0,#c79ad8)');
+  renderTabs(); renderGrid(); tekenKnuffie();
+  toon('dressScreen');
+}
+function dressTerug(){ if (dress.terugNaar === 'mapScreen') naarKaart(); else naarStart(); }
+
+function renderTabs(){
+  const bak = document.getElementById('dressTabs'); bak.innerHTML = '';
+  Object.keys(KLEDING).forEach(cat => {
+    const b = document.createElement('button');
+    b.className = 'dress-tab' + (cat === dress.cat ? ' actief' : '');
+    b.textContent = KLEDING[cat].tab; b.title = cat;
+    b.style.background = TAB_KLEUR[cat] || '#f3eefe';
+    b.onclick = () => { dress.cat = cat; renderTabs(); renderGrid(); };
+    bak.appendChild(b);
+  });
+}
+
+function renderGrid(){
+  const cat = KLEDING[dress.cat], type = cat.type;
+  document.getElementById('dressCat').textContent = cat.tab + ' ' + dress.cat;
+  const bak = document.getElementById('dressGrid'); bak.innerHTML = '';
+  // "geen" optie
+  const geen = document.createElement('div');
+  geen.className = 'dress-item geen' + (!dress.uit[type] ? ' gekozen' : '');
+  geen.innerHTML = '<span class="verbod">⊘</span>';
+  geen.onclick = () => { dress.uit[type] = null; renderGrid(); tekenKnuffie(); speel('goed'); };
+  bak.appendChild(geen);
+  // items
+  cat.items.forEach(item => {
+    const vrij = isVrij(item);
+    const gekozen = dress.uit[type] && dress.uit[type].id === item.id;
+    const el = document.createElement('div');
+    el.className = 'dress-item' + (vrij ? '' : ' op-slot') + (gekozen ? ' gekozen' : '');
+    el.title = item.naam;
+    el.innerHTML = '<div class="staal" style="background:' + item.kleur + '"></div>'
+      + '<span class="merk">' + cat.tab + '</span>'
+      + (vrij ? '' : '<span class="vraag">?</span><span class="slotje">🔒</span>');
+    el.onclick = () => kiesItem(item);
+    bak.appendChild(el);
+  });
+}
+
+function kiesItem(item){
+  if (!isVrij(item)){ openQuiz(item); return; }
+  equip(item); renderGrid(); tekenKnuffie(); speel('goed');
+}
+function equip(item){
+  const t = item.type;
+  if (t === 'jurk'){ dress.uit.jurk = item; dress.uit.top = null; dress.uit.broek = null; dress.uit.rok = null; }
+  else if (t === 'top'){ dress.uit.top = item; dress.uit.jurk = null; }
+  else if (t === 'broek'){ dress.uit.broek = item; dress.uit.rok = null; dress.uit.jurk = null; }
+  else if (t === 'rok'){ dress.uit.rok = item; dress.uit.broek = null; dress.uit.jurk = null; }
+  else { dress.uit[t] = item; }   // accessoires en schoenen: onafhankelijke laag
+}
+
+function willekeurigeOutfit(){
+  function randItem(cat){ const v = KLEDING[cat].items.filter(isVrij); return v.length ? v[rnd(0, v.length-1)] : null; }
+  dress.uit = { top:null, broek:null, rok:null, jurk:null, hoofd:null, bril:null, tas:null, schoen:null };
+  if (Math.random() < 0.4){ const j = randItem('Jurken'); if (j) dress.uit.jurk = j; }
+  else {
+    const t = randItem('Topjes'); if (t) dress.uit.top = t;
+    if (Math.random() < 0.5){ const b = randItem('Broeken'); if (b) dress.uit.broek = b; }
+    else { const r = randItem('Rokjes'); if (r) dress.uit.rok = r; }
+  }
+  if (Math.random() < 0.7){ const a = randItem('Accessoires'); if (a) dress.uit.hoofd = a; }
+  if (Math.random() < 0.4){ const g = randItem('Brillen');    if (g) dress.uit.bril = g; }
+  if (Math.random() < 0.5){ const z = randItem('Tassen');     if (z) dress.uit.tas = z; }
+  if (Math.random() < 0.7){ const s = randItem('Schoenen');   if (s) dress.uit.schoen = s; }
+  renderGrid(); tekenKnuffie(); speel('goed');
+}
+
+/* ----- Modequiz ----- */
+function maakModeSom(){
+  const max = staat.niveau === 'makkelijk' ? 5 : (staat.niveau === 'moeilijk' ? 12 : 10);
+  const a = rnd(2, max), b = rnd(2, 10);
+  return { tekst: `${a} × ${b} = ?`, ans: a * b };
+}
+function maakOptiesN(ans, n){
+  const set = new Set([ans]);
+  const spreiding = ans <= 20 ? 6 : 12;
+  let p = 0;
+  while (set.size < n && p++ < 90){ let k = ans + rnd(-spreiding, spreiding); if (k > 0 && k !== ans) set.add(k); }
+  let e = 1; while (set.size < n){ set.add(ans + e); e++; }
+  const arr = [...set];
+  for (let i = arr.length-1; i>0; i--){ const j = rnd(0,i); [arr[i],arr[j]] = [arr[j],arr[i]]; }
+  return arr;
+}
+function openQuiz(item){
+  dress.hangend = item;
+  dress.quiz = maakModeSom();
+  document.getElementById('quizVraag').textContent = dress.quiz.tekst;
+  const bak = document.getElementById('quizOpties'); bak.innerHTML = '';
+  maakOptiesN(dress.quiz.ans, 5).forEach(o => {
+    const b = document.createElement('button');
+    b.className = 'quiz-optie'; b.textContent = o;
+    b.onclick = () => quizAntwoord(o, b);
+    bak.appendChild(b);
+  });
+  document.getElementById('modequiz').classList.add('open');
+}
+function quizAntwoord(keuze, knop){
+  if (keuze === dress.quiz.ans){
+    knop.classList.add('goed'); speel('win');
+    if (!dress.ontgrendeld.includes(dress.hangend.id)){ dress.ontgrendeld.push(dress.hangend.id); bewaarOntgrendeld(); }
+    equip(dress.hangend);
+    setTimeout(() => { sluitQuiz(); renderGrid(); tekenKnuffie(); }, 500);
+  } else {
+    knop.classList.add('fout'); speel('fout');
+    setTimeout(() => knop.classList.remove('fout'), 450);
+  }
+}
+function sluitQuiz(){ document.getElementById('modequiz').classList.remove('open'); dress.hangend = null; }
+
+/* ----- Mode-studio achtergrond ----- */
+function tekenStudio(ctx){
+  // muur
+  let g = ctx.createLinearGradient(0, 0, 0, 212); g.addColorStop(0, '#6a4ea6'); g.addColorStop(1, '#8d6bc4');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, 260, 212);
+  // vloer
+  let f = ctx.createLinearGradient(0, 212, 0, 320); f.addColorStop(0, '#caa0d8'); f.addColorStop(1, '#a87cc0');
+  ctx.fillStyle = f; ctx.fillRect(0, 212, 260, 108);
+  ctx.strokeStyle = 'rgba(255,255,255,0.16)'; ctx.lineWidth = 2;
+  for (let i = -2; i <= 3; i++){ ctx.beginPath(); ctx.moveTo(130 + i*42, 212); ctx.lineTo(130 + i*120, 320); ctx.stroke(); }
+  ctx.beginPath(); ctx.moveTo(0, 212); ctx.lineTo(260, 212); ctx.stroke();
+  // raam rechtsboven
+  studioRaam(ctx, 190, 24, 60, 76);
+  // spiegel linksboven
+  studioSpiegel(ctx, 12, 24, 44, 64);
+  // kledingrek links
+  studioRek(ctx, 12, 116);
+  // paspop rechts op de vloer
+  studioPaspop(ctx, 224, 252);
+  // plantje rechtsonder
+  studioPlant(ctx, 238, 298);
+  // vloerkleed onder Knuffie
+  ctx.fillStyle = 'rgba(255,120,190,0.32)'; ctx.beginPath(); ctx.ellipse(130, 300, 74, 18, 0, 0, 7); ctx.fill();
+  // glitter
+  ctx.fillStyle = 'rgba(255,255,255,0.85)'; ctx.font = '12px serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  [[44,150],[232,150],[42,250]].forEach(p => ctx.fillText('✨', p[0], p[1]));
+}
+function studioRaam(ctx, x, y, w, h){
+  ctx.fillStyle = '#bfe9ff'; ctx.fillRect(x, y, w, h*0.6);
+  ctx.fillStyle = '#7cc6ea'; ctx.fillRect(x, y + h*0.6, w, h*0.4);
+  ctx.fillStyle = '#fff3a8'; ctx.beginPath(); ctx.ellipse(x + w*0.68, y + h*0.24, 8, 8, 0, 0, 7); ctx.fill();
+  ctx.strokeStyle = '#a9744f'; ctx.lineWidth = 5; ctx.strokeRect(x, y, w, h);
+  ctx.lineWidth = 3; ctx.beginPath();
+  ctx.moveTo(x + w/2, y); ctx.lineTo(x + w/2, y + h);
+  ctx.moveTo(x, y + h/2); ctx.lineTo(x + w, y + h/2); ctx.stroke();
+}
+function studioRek(ctx, x, y){
+  ctx.strokeStyle = '#d6d2e6'; ctx.lineWidth = 4; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + 56, y); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x + 6, y); ctx.lineTo(x + 2, y + 118); ctx.moveTo(x + 50, y); ctx.lineTo(x + 54, y + 118); ctx.stroke();
+  studioHanger(ctx, x + 18, y, '#ffd24d');
+  studioHanger(ctx, x + 38, y, '#7fd0ff');
+  ctx.lineCap = 'butt';
+}
+function studioHanger(ctx, x, y, k){
+  ctx.strokeStyle = '#9a9aa6'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(x, y - 4); ctx.lineTo(x, y + 6); ctx.stroke();
+  ctx.fillStyle = k; ctx.beginPath(); ctx.moveTo(x, y + 6); ctx.lineTo(x - 13, y + 58); ctx.lineTo(x + 13, y + 58); ctx.closePath(); ctx.fill();
+}
+function studioSpiegel(ctx, x, y, w, h){
+  ctx.fillStyle = '#e6b25a'; rondeRect(ctx, x, y, w, h, 22); ctx.fill();
+  ctx.fillStyle = '#dad3ef'; rondeRect(ctx, x+5, y+5, w-10, h-10, 18); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,0.5)';
+  ctx.beginPath();
+  ctx.moveTo(x+10, y+18); ctx.lineTo(x+24, y+12); ctx.lineTo(x+30, y+36); ctx.lineTo(x+16, y+42); ctx.closePath(); ctx.fill();
+}
+function studioPlant(ctx, x, y){
+  // pot
+  ctx.fillStyle = '#c46b39';
+  ctx.beginPath(); ctx.moveTo(x-12, y); ctx.lineTo(x+12, y); ctx.lineTo(x+10, y+18); ctx.lineTo(x-10, y+18); ctx.closePath(); ctx.fill();
+  // bladeren
+  ctx.fillStyle = '#4faf6a';
+  for (let i = 0; i < 5; i++){
+    const a = -Math.PI/2 + (i-2) * 0.5;
+    ctx.beginPath(); ctx.ellipse(x + Math.cos(a)*4, y - 4 + Math.sin(a)*4, 6, 14, a + Math.PI/2, 0, 7); ctx.fill();
+  }
+  ctx.fillStyle = 'rgba(255,255,255,0.4)';
+  ctx.beginPath(); ctx.ellipse(x-3, y-12, 2, 4, 0, 0, 7); ctx.fill();
+}
+
+function studioPaspop(ctx, x, y){
+  ctx.fillStyle = '#ecbf7a';
+  ctx.beginPath();
+  ctx.moveTo(x - 13, y - 44); ctx.quadraticCurveTo(x - 22, y - 8, x - 11, y);
+  ctx.lineTo(x + 11, y); ctx.quadraticCurveTo(x + 22, y - 8, x + 13, y - 44);
+  ctx.quadraticCurveTo(x, y - 54, x - 13, y - 44); ctx.fill();
+  ctx.strokeStyle = '#9a9aa6'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y + 32); ctx.stroke();
+  ctx.fillStyle = '#9a9aa6'; ctx.beginPath(); ctx.ellipse(x, y + 34, 14, 4, 0, 0, 7); ctx.fill();
+}
+
+/* ----- Catwalk-scène ----- */
+function tekenCatwalk(ctx){
+  let g = ctx.createLinearGradient(0, 0, 0, 320);
+  g.addColorStop(0, '#2a0e3d'); g.addColorStop(1, '#5b1f6a');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, 260, 320);
+  // gordijnen langs randen (donkerrood)
+  ctx.fillStyle = '#7c1a3c';
+  for (let i = 0; i < 6; i++){ ctx.fillRect(i*8, 0, 7, 220); ctx.fillRect(260 - i*8 - 7, 0, 7, 220); }
+  // runway (roze tapijt, perspectief)
+  ctx.fillStyle = '#ff70a8';
+  ctx.beginPath(); ctx.moveTo(96, 168); ctx.lineTo(164, 168); ctx.lineTo(222, 320); ctx.lineTo(38, 320); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = '#ffe3a8'; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(96, 168); ctx.lineTo(38, 320); ctx.moveTo(164, 168); ctx.lineTo(222, 320); ctx.stroke();
+  // spotlight-kegels
+  ctx.fillStyle = 'rgba(255,240,180,0.20)';
+  ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(130, 168); ctx.lineTo(72, 0); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(260, 0); ctx.lineTo(130, 168); ctx.lineTo(188, 0); ctx.closePath(); ctx.fill();
+  // camera-flitsen
+  ctx.fillStyle = '#fff'; ctx.font = '14px serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  [['⚡',28,52],['✨',230,48],['⚡',32,130],['✨',228,128]].forEach(p => ctx.fillText(p[0], p[1], p[2]));
+  // titel
+  ctx.fillStyle = '#fff'; ctx.font = 'bold 18px "Comic Sans MS",sans-serif';
+  ctx.fillText('🎉 Catwalk! 🎉', 130, 18);
+}
+
+function catwalkToggle(){
+  dress.modus = dress.modus === 'catwalk' ? 'studio' : 'catwalk';
+  const knop = document.getElementById('catwalkKnop');
+  if (knop) knop.textContent = dress.modus === 'catwalk' ? '🏠' : '📸';
+  if (knop) knop.title = dress.modus === 'catwalk' ? 'Terug naar studio' : 'Catwalk!';
+  speel('goed');
+  tekenKnuffie();
+}
+
+/* ----- Knuffie tekenen met kleren ----- */
+function tekenKnuffie(){
+  const ctx = dressCtx, cx = 130; if (!ctx) return;
+  if (dress.modus === 'catwalk') tekenCatwalk(ctx); else tekenStudio(ctx);
+  const fur = '#ededf2', oor = '#ffc6e0', neus = '#ff8fb1';
+  // schaduw
+  ctx.fillStyle = 'rgba(0,0,0,0.06)'; ctx.beginPath(); ctx.ellipse(cx, 302, 68, 13, 0, 0, 7); ctx.fill();
+  // oren
+  [-28, 28].forEach(dx => {
+    ctx.fillStyle = fur; ctx.beginPath(); ctx.ellipse(cx+dx, 56, 15, 40, 0, 0, 7); ctx.fill();
+    ctx.fillStyle = oor; ctx.beginPath(); ctx.ellipse(cx+dx, 58, 7, 28, 0, 0, 7); ctx.fill();
+  });
+  // lijf + armen + benen
+  ctx.fillStyle = fur;
+  rondeRect(ctx, cx-44, 150, 88, 112, 34); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(cx-46, 184, 13, 30, 0.2, 0, 7); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(cx+46, 184, 13, 30, -0.2, 0, 7); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(cx-18, 270, 14, 26, 0, 0, 7); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(cx+18, 270, 14, 26, 0, 0, 7); ctx.fill();
+  // ondergoed (basis)
+  ctx.fillStyle = '#ffc0d8';
+  rondeRect(ctx, cx-40, 168, 80, 18, 9); ctx.fill();
+  rondeRect(ctx, cx-30, 238, 60, 22, 11); ctx.fill();
+  // hoofd
+  ctx.fillStyle = fur; ctx.beginPath(); ctx.ellipse(cx, 108, 60, 56, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = '#ffb9d6';
+  ctx.beginPath(); ctx.ellipse(cx-34, 120, 11, 7, 0, 0, 7); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(cx+34, 120, 11, 7, 0, 0, 7); ctx.fill();
+  [-24, 24].forEach(dx => {
+    ctx.fillStyle = '#3a2350'; ctx.beginPath(); ctx.ellipse(cx+dx, 106, 12, 15, 0, 0, 7); ctx.fill();
+    ctx.fillStyle = '#7fd1ff'; ctx.beginPath(); ctx.ellipse(cx+dx, 109, 7, 9, 0, 0, 7); ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.ellipse(cx+dx-3, 103, 3.5, 4, 0, 0, 7); ctx.fill();
+  });
+  ctx.fillStyle = neus; ctx.beginPath(); ctx.ellipse(cx, 128, 5, 4, 0, 0, 7); ctx.fill();
+  ctx.strokeStyle = '#c96f93'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(cx, 132, 8, 0.15*Math.PI, 0.85*Math.PI); ctx.stroke();
+  // kleding
+  const u = dress.uit;
+  if (u.jurk) tekenJurk(ctx, cx, u.jurk.kleur);
+  else { if (u.rok) tekenRok(ctx, cx, u.rok.kleur); if (u.broek) tekenBroek(ctx, cx, u.broek.kleur); if (u.top) tekenTop(ctx, cx, u.top.kleur); }
+  if (u.schoen) tekenSchoen(ctx, cx, u.schoen.kleur);
+  if (u.tas) tekenTas(ctx, cx, u.tas);
+  if (u.bril) tekenBril(ctx, cx, u.bril);
+  if (u.hoofd) tekenHoofd(ctx, cx, u.hoofd);
+}
+function tekenBril(ctx, cx, item){
+  const k = item.kleur, vorm = item.vorm;
+  if (vorm === 'hart'){
+    const teken = (x) => {
+      ctx.beginPath();
+      ctx.moveTo(x, 116); ctx.bezierCurveTo(x-14, 102, x-2, 96, x, 108);
+      ctx.bezierCurveTo(x+2, 96, x+14, 102, x, 116); ctx.closePath(); ctx.fill();
+    };
+    ctx.fillStyle = k; teken(cx - 22); teken(cx + 22);
+  } else {
+    ctx.strokeStyle = k; ctx.lineWidth = 3.5;
+    ctx.beginPath(); ctx.ellipse(cx-22, 108, 13, 12, 0, 0, 7); ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(cx+22, 108, 13, 12, 0, 0, 7); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx-9, 108); ctx.lineTo(cx+9, 108); ctx.stroke();
+    if (vorm === 'zon'){
+      ctx.fillStyle = k;
+      ctx.beginPath(); ctx.ellipse(cx-22, 108, 12, 11, 0, 0, 7); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(cx+22, 108, 12, 11, 0, 0, 7); ctx.fill();
+    }
+  }
+}
+function tekenTas(ctx, cx, item){
+  const k = item.kleur, bx = cx + 56, by = 218;
+  // body
+  ctx.fillStyle = k;
+  rondeRect(ctx, bx-13, by, 26, 28, 6); ctx.fill();
+  // gesp/clip
+  ctx.fillStyle = 'rgba(255,255,255,0.85)';
+  ctx.fillRect(bx-4, by+5, 8, 4);
+  // hengsel
+  ctx.strokeStyle = k; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.arc(bx, by, 10, Math.PI, 0); ctx.stroke();
+}
+function tekenTop(ctx, cx, k){
+  ctx.fillStyle = k;
+  ctx.beginPath(); ctx.ellipse(cx-44, 178, 14, 18, 0.2, 0, 7); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(cx+44, 178, 14, 18, -0.2, 0, 7); ctx.fill();
+  rondeRect(ctx, cx-42, 160, 84, 58, 20); ctx.fill();
+  ctx.fillStyle = 'rgba(0,0,0,0.08)'; rondeRect(ctx, cx-42, 206, 84, 12, 8); ctx.fill();
+}
+function tekenBroek(ctx, cx, k){
+  ctx.fillStyle = k;
+  rondeRect(ctx, cx-34, 210, 68, 22, 10); ctx.fill();
+  rondeRect(ctx, cx-32, 224, 28, 54, 12); ctx.fill();
+  rondeRect(ctx, cx+4, 224, 28, 54, 12); ctx.fill();
+}
+function tekenRok(ctx, cx, k){
+  ctx.fillStyle = k;
+  ctx.beginPath(); ctx.moveTo(cx-30, 212); ctx.lineTo(cx+30, 212); ctx.lineTo(cx+56, 264); ctx.lineTo(cx-56, 264); ctx.closePath(); ctx.fill();
+}
+function tekenJurk(ctx, cx, k){
+  ctx.fillStyle = k;
+  ctx.beginPath(); ctx.ellipse(cx-44, 178, 14, 18, 0.2, 0, 7); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(cx+44, 178, 14, 18, -0.2, 0, 7); ctx.fill();
+  rondeRect(ctx, cx-42, 160, 84, 52, 18); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(cx-40, 206); ctx.lineTo(cx+40, 206); ctx.lineTo(cx+62, 272); ctx.lineTo(cx-62, 272); ctx.closePath(); ctx.fill();
+}
+function tekenSchoen(ctx, cx, k){
+  ctx.fillStyle = k;
+  ctx.beginPath(); ctx.ellipse(cx-18, 290, 16, 11, 0, 0, 7); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(cx+18, 290, 16, 11, 0, 0, 7); ctx.fill();
+}
+function tekenHoofd(ctx, cx, item){
+  const k = item.kleur, vorm = item.vorm;
+  if (vorm === 'strik'){
+    ctx.fillStyle = k;
+    ctx.beginPath(); ctx.moveTo(cx, 72); ctx.lineTo(cx-22, 60); ctx.lineTo(cx-22, 84); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(cx, 72); ctx.lineTo(cx+22, 60); ctx.lineTo(cx+22, 84); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(cx, 72, 7, 8, 0, 0, 7); ctx.fill();
+  } else if (vorm === 'kroon'){
+    ctx.fillStyle = k; ctx.beginPath();
+    ctx.moveTo(cx-26, 72); ctx.lineTo(cx-26, 50); ctx.lineTo(cx-13, 62); ctx.lineTo(cx, 44);
+    ctx.lineTo(cx+13, 62); ctx.lineTo(cx+26, 50); ctx.lineTo(cx+26, 72); ctx.closePath(); ctx.fill();
+  } else if (vorm === 'bloem'){
+    ctx.fillStyle = k;
+    for (let i = 0; i < 5; i++){ const a = i / 5 * Math.PI * 2; ctx.beginPath(); ctx.ellipse(cx-32 + Math.cos(a)*9, 66 + Math.sin(a)*9, 6, 6, 0, 0, 7); ctx.fill(); }
+    ctx.fillStyle = '#ffd23d'; ctx.beginPath(); ctx.ellipse(cx-32, 66, 5, 5, 0, 0, 7); ctx.fill();
+  }
+}
+
+/* ====================== GELUID ====================== */
+let audioCtx = null;
+function speel(soort){
+  if (!staat.geluidAan) return;
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const nu = audioCtx.currentTime;
+    const noten = soort === 'goed' ? [523, 659, 784]
+                : soort === 'win'  ? [523, 659, 784, 1047]
+                : [220, 165];
+    noten.forEach((f, i) => {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.value = f;
+      const t = nu + i * 0.09;
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.exponentialRampToValueAtTime(0.25, t + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
+      osc.connect(gain); gain.connect(audioCtx.destination);
+      osc.start(t); osc.stop(t + 0.2);
+    });
+  } catch(e){ /* geluid niet beschikbaar */ }
+}
+function wisselGeluid(){
+  staat.geluidAan = !staat.geluidAan;
+  document.getElementById('geluidKnop').textContent = staat.geluidAan ? '🔊' : '🔇';
+}
+</script>
+</body>
+</html>

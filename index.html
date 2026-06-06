@@ -645,7 +645,7 @@ function startRit(){
     doel: 6200 + wi * 700,                       // langere race met duidelijke finish
     speed: 5.4, maxSpeed: 5.8,
     vosBasis: 5.0 + wi * 0.18,                   // echte, oplopende snelheid per wereld
-    wegHalf: 112 - wi * 3,                        // breder pad, milde versmalling
+    wegHalf: 100 - wi * 4,                        // duidelijk zichtbare berm aan beide kanten
     obstakels: [], wortels: [], sterren: [],
     genTot: 280,
     crashKoeling: 0, offRoad: false, boost: 0,
@@ -685,7 +685,7 @@ function ritUpdate(){
   let doelSpeed = r.maxSpeed;
   if (turbo){ doelSpeed = r.maxSpeed * 1.55; }
   else if (r.crashKoeling > 0){ doelSpeed = 2.8; r.crashKoeling--; }
-  else if (r.offRoad){ doelSpeed = 3.7; }
+  else if (r.offRoad){ doelSpeed = 2.8; }
   r.speed += (doelSpeed - r.speed) * 0.16;
   r.dist += r.speed;
   r.scroll += r.speed;
@@ -708,7 +708,7 @@ function ritUpdate(){
 
   // naast de weg? (ruime marge; tijdens power telt het niet)
   const cx = ritCenterX(r.dist);
-  r.offRoad = !onkwetsbaar && Math.abs(r.kartX - cx) > (r.wegHalf - r.kartB/2 + 12);
+  r.offRoad = !onkwetsbaar && Math.abs(r.kartX - cx) > (r.wegHalf - r.kartB/2 + 2);
 
   // items vooruit maken
   while (r.genTot < r.dist + r.H + 80){

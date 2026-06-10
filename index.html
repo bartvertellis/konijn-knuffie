@@ -337,6 +337,7 @@
           <div class="dress-grid" id="dressGrid"></div>
         </div>
       </div>
+      <button class="knop" id="dressVerder" style="display:none; margin-top:14px" onclick="dressVerderKnop()">🎉 Verder met het avontuur ▶</button>
     </div>
   </section>
 
@@ -542,6 +543,10 @@ function held(){ return staat.naam ? staat.naam : "held"; }
 function toon(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
+  // muziek per scherm (functies staan verderop; hoisted)
+  if (id === 'dressScreen') startMuziek('dress');
+  else if (id === 'raceScreen') startMuziek('race');
+  else stopMuziek();
 }
 function zetBg(css){ document.body.style.background = css; }
 
@@ -1154,7 +1159,10 @@ function wereldGehaald(){
     'Een stap dichter bij de Gouden Wortel!'
   ]);
   document.getElementById('clearSterren').textContent = sterren;
-  toon('clearScreen');
+  // 3-traps per level: race → sommen → Knuffie omkleden → verder
+  openDress();
+  dress.naLevel = true;
+  document.getElementById('dressVerder').style.display = 'inline-block';
 }
 
 function wereldMislukt(){
@@ -1256,12 +1264,22 @@ function openDress(){
   if (!dress.ontgrendeld) dress.ontgrendeld = laadOntgrendeld();
   const a = document.querySelector('.screen.active');
   dress.terugNaar = a ? a.id : 'startScreen';
+  dress.naLevel = false;
+  document.getElementById('dressVerder').style.display = 'none';
   dressCtx = document.getElementById('dressCanvas').getContext('2d');
   zetBg('linear-gradient(160deg,#7b5bb0,#c79ad8)');
   renderTabs(); renderGrid(); tekenKnuffie();
   toon('dressScreen');
 }
-function dressTerug(){ if (dress.terugNaar === 'mapScreen') naarKaart(); else naarStart(); }
+function dressTerug(){
+  if (dress.naLevel){ dressVerderKnop(); return; }
+  if (dress.terugNaar === 'mapScreen') naarKaart(); else naarStart();
+}
+function dressVerderKnop(){
+  dress.naLevel = false;
+  document.getElementById('dressVerder').style.display = 'none';
+  toon('clearScreen');
+}
 
 function renderTabs(){
   const bak = document.getElementById('dressTabs'); bak.innerHTML = '';
@@ -1503,10 +1521,11 @@ function tekenKnuffie(){
   ctx.beginPath(); ctx.ellipse(cx+46, 184, 13, 30, -0.2, 0, 7); ctx.fill();
   ctx.beginPath(); ctx.ellipse(cx-18, 270, 14, 26, 0, 0, 7); ctx.fill();
   ctx.beginPath(); ctx.ellipse(cx+18, 270, 14, 26, 0, 0, 7); ctx.fill();
-  // ondergoed (basis)
+  // ondergoed alleen tonen waar geen kleding overheen zit
+  const u = dress.uit;
   ctx.fillStyle = '#ffc0d8';
-  rondeRect(ctx, cx-40, 168, 80, 18, 9); ctx.fill();
-  rondeRect(ctx, cx-30, 238, 60, 22, 11); ctx.fill();
+  if (!u.top && !u.jurk){ rondeRect(ctx, cx-40, 168, 80, 18, 9); ctx.fill(); }
+  if (!u.broek && !u.rok && !u.jurk){ rondeRect(ctx, cx-30, 238, 60, 22, 11); ctx.fill(); }
   // hoofd
   ctx.fillStyle = fur; ctx.beginPath(); ctx.ellipse(cx, 108, 60, 56, 0, 0, 7); ctx.fill();
   ctx.fillStyle = '#ffb9d6';
@@ -1520,7 +1539,6 @@ function tekenKnuffie(){
   ctx.fillStyle = neus; ctx.beginPath(); ctx.ellipse(cx, 128, 5, 4, 0, 0, 7); ctx.fill();
   ctx.strokeStyle = '#c96f93'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(cx, 132, 8, 0.15*Math.PI, 0.85*Math.PI); ctx.stroke();
   // kleding
-  const u = dress.uit;
   if (u.jurk) tekenJurk(ctx, cx, u.jurk.kleur);
   else { if (u.rok) tekenRok(ctx, cx, u.rok.kleur); if (u.broek) tekenBroek(ctx, cx, u.broek.kleur); if (u.top) tekenTop(ctx, cx, u.top.kleur); }
   if (u.schoen) tekenSchoen(ctx, cx, u.schoen.kleur);
@@ -1563,27 +1581,38 @@ function tekenTas(ctx, cx, item){
 }
 function tekenTop(ctx, cx, k){
   ctx.fillStyle = k;
-  ctx.beginPath(); ctx.ellipse(cx-44, 178, 14, 18, 0.2, 0, 7); ctx.fill();
-  ctx.beginPath(); ctx.ellipse(cx+44, 178, 14, 18, -0.2, 0, 7); ctx.fill();
-  rondeRect(ctx, cx-42, 160, 84, 58, 20); ctx.fill();
-  ctx.fillStyle = 'rgba(0,0,0,0.08)'; rondeRect(ctx, cx-42, 206, 84, 12, 8); ctx.fill();
+  // mouwen ruim over de armen heen
+  ctx.beginPath(); ctx.ellipse(cx-47, 180, 17, 24, 0.2, 0, 7); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(cx+47, 180, 17, 24, -0.2, 0, 7); ctx.fill();
+  // romp breder dan het lijf, doorlopend tot op de heupen
+  rondeRect(ctx, cx-48, 158, 96, 64, 22); ctx.fill();
+  ctx.fillStyle = 'rgba(0,0,0,0.08)'; rondeRect(ctx, cx-48, 210, 96, 12, 8); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,0.25)'; rondeRect(ctx, cx-48, 158, 96, 10, 8); ctx.fill();
 }
 function tekenBroek(ctx, cx, k){
   ctx.fillStyle = k;
-  rondeRect(ctx, cx-34, 210, 68, 22, 10); ctx.fill();
-  rondeRect(ctx, cx-32, 224, 28, 54, 12); ctx.fill();
-  rondeRect(ctx, cx+4, 224, 28, 54, 12); ctx.fill();
+  // heupstuk over de volle lijfbreedte
+  rondeRect(ctx, cx-46, 206, 92, 28, 14); ctx.fill();
+  // pijpen ruim over de benen
+  rondeRect(ctx, cx-37, 226, 35, 56, 13); ctx.fill();
+  rondeRect(ctx, cx+2, 226, 35, 56, 13); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,0.18)'; rondeRect(ctx, cx-46, 206, 92, 8, 6); ctx.fill();
 }
 function tekenRok(ctx, cx, k){
   ctx.fillStyle = k;
-  ctx.beginPath(); ctx.moveTo(cx-30, 212); ctx.lineTo(cx+30, 212); ctx.lineTo(cx+56, 264); ctx.lineTo(cx-56, 264); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(cx-46, 206); ctx.lineTo(cx+46, 206); ctx.lineTo(cx+60, 266); ctx.lineTo(cx-60, 266); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,0.2)'; rondeRect(ctx, cx-46, 206, 92, 8, 6); ctx.fill();
 }
 function tekenJurk(ctx, cx, k){
   ctx.fillStyle = k;
-  ctx.beginPath(); ctx.ellipse(cx-44, 178, 14, 18, 0.2, 0, 7); ctx.fill();
-  ctx.beginPath(); ctx.ellipse(cx+44, 178, 14, 18, -0.2, 0, 7); ctx.fill();
-  rondeRect(ctx, cx-42, 160, 84, 52, 18); ctx.fill();
-  ctx.beginPath(); ctx.moveTo(cx-40, 206); ctx.lineTo(cx+40, 206); ctx.lineTo(cx+62, 272); ctx.lineTo(cx-62, 272); ctx.closePath(); ctx.fill();
+  // mouwen ruim over de armen heen
+  ctx.beginPath(); ctx.ellipse(cx-47, 180, 17, 24, 0.2, 0, 7); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(cx+47, 180, 17, 24, -0.2, 0, 7); ctx.fill();
+  // lijfje + wijde rok, alles dekkend
+  rondeRect(ctx, cx-48, 158, 96, 54, 20); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(cx-46, 204); ctx.lineTo(cx+46, 204); ctx.lineTo(cx+64, 274); ctx.lineTo(cx-64, 274); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,0.25)';
+  ctx.beginPath(); ctx.ellipse(cx, 206, 44, 5, 0, 0, 7); ctx.fill();
 }
 function tekenSchoen(ctx, cx, k){
   ctx.fillStyle = k;
@@ -1635,6 +1664,67 @@ function speel(soort){
 function wisselGeluid(){
   staat.geluidAan = !staat.geluidAan;
   document.getElementById('geluidKnop').textContent = staat.geluidAan ? '🔊' : '🔇';
+  if (!staat.geluidAan) stopMuziek();
+  else {
+    const a = document.querySelector('.screen.active');
+    if (a && a.id === 'dressScreen') startMuziek('dress');
+    else if (a && a.id === 'raceScreen') startMuziek('race');
+  }
+}
+
+/* ----- achtergrondmuziek (loopjes via WebAudio) ----- */
+const MUZIEK = {
+  // vrolijk huppel-deuntje voor het omkleden
+  dress: { tempo: 260, duur: 0.22, noten: [
+    523, 659, 784, 659,  880, 0, 784, 659,
+    523, 659, 784, 880,  1047, 880, 784, 0,
+    587, 698, 880, 698,  784, 0, 659, 587,
+    523, 659, 784, 659,  523, 0, 392, 0
+  ]},
+  // spannend, sneller motiefje onder de race
+  race: { tempo: 150, duur: 0.13, noten: [
+    330, 0, 330, 392,  330, 0, 294, 330,
+    440, 0, 392, 330,  494, 440, 392, 330,
+    330, 0, 330, 392,  523, 0, 494, 440,
+    392, 440, 494, 523,  587, 523, 494, 440
+  ]}
+};
+const muziek = { id: null, naam: null, stap: 0 };
+
+function startMuziek(naam){
+  stopMuziek();
+  muziek.naam = naam;
+  if (!staat.geluidAan) return;
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+  } catch(e){ return; }
+  const m = MUZIEK[naam];
+  muziek.stap = 0;
+  muziek.id = setInterval(() => {
+    const f = m.noten[muziek.stap % m.noten.length];
+    if (f) speelNoot(f, m.duur);
+    muziek.stap++;
+  }, m.tempo);
+}
+function stopMuziek(){
+  if (muziek.id){ clearInterval(muziek.id); muziek.id = null; }
+  muziek.naam = null;
+}
+function speelNoot(freq, duur){
+  if (!staat.geluidAan || !audioCtx) return;
+  try {
+    const t = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.exponentialRampToValueAtTime(0.07, t + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + duur);
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    osc.start(t); osc.stop(t + duur + 0.05);
+  } catch(e){ /* stil */ }
 }
 </script>
 </body>
